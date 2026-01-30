@@ -1,0 +1,8 @@
+Müşteri No: {company_name}
+
+Kural tabanlı cümleler:
+{data_rows}
+
+Yukarıdaki cümleleri tek akıcı paragraf halinde yeniden yaz. Tüm sayıları koru.
+
+Özet:

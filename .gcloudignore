@@ -1,0 +1,14 @@
+.git
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+.env
+.claude/
+*.gsheet
+~$*
+summarize_prompt.py
+prompt.txt
+system_prompt.txt
+runs/
+client_secret_920197419470-htiojim3sqb7tu6u6gpkig4tq73vhhpo.apps.googleusercontent.com.json

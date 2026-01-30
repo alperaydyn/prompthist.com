@@ -1,0 +1,4809 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PromptHist - Prompt Testing & History</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e4e4e4;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        /* Auth Styles */
+        .auth-container {
+            position: absolute;
+            top: 0;
+            right: 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+        .user-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00d9ff, #00ff88);
+        }
+        .user-name {
+            color: #e4e4e4;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .auth-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+        .auth-btn-google {
+            background: #fff;
+            color: #333;
+        }
+        .auth-btn-google:hover {
+            background: #f0f0f0;
+            transform: translateY(-1px);
+        }
+        .auth-btn-logout {
+            background: rgba(255, 255, 255, 0.1);
+            color: #e4e4e4;
+        }
+        .auth-btn-logout:hover {
+            background: rgba(255, 82, 82, 0.2);
+            color: #ff5252;
+        }
+        .google-icon {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Project Header */
+        .project-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .back-to-dashboard {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 8px 16px;
+            color: #a1a1aa;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .back-to-dashboard:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        .back-icon {
+            font-size: 1.1rem;
+        }
+        .project-title-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            justify-content: center;
+        }
+        .project-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .project-role-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        .project-role-badge.owner { background: rgba(0, 217, 255, 0.2); color: #00d9ff; }
+        .project-role-badge.editor { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+        .project-role-badge.viewer { background: rgba(255, 255, 255, 0.1); color: #a1a1aa; }
+        .project-settings-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 8px 16px;
+            color: #a1a1aa;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .project-settings-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: #e4e4e4;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .btn-icon:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #00d9ff;
+        }
+
+        /* Project Modal */
+        .project-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1500;
+            justify-content: center;
+            align-items: center;
+        }
+        .project-modal.visible { display: flex; }
+        .project-modal-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 30px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .project-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .project-modal-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        .project-modal-close {
+            background: none;
+            border: none;
+            color: #8892a0;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .project-form-group {
+            margin-bottom: 20px;
+        }
+        .project-form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #a1a1aa;
+            font-size: 0.9rem;
+        }
+        .project-form-input {
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #e4e4e4;
+            font-size: 0.95rem;
+        }
+        .project-form-input:focus {
+            outline: none;
+            border-color: #00d9ff;
+        }
+        .project-form-textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        /* Team Management */
+        .team-section {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .team-section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        .team-member {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .team-member-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .team-member-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00d9ff, #00ff88);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .team-member-name {
+            font-size: 0.95rem;
+        }
+        .team-member-email {
+            font-size: 0.8rem;
+            color: #8892a0;
+        }
+        .team-member-role {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .role-owner { background: rgba(0, 217, 255, 0.2); color: #00d9ff; }
+        .role-editor { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+        .role-viewer { background: rgba(255, 255, 255, 0.1); color: #a1a1aa; }
+
+        /* Team Member Actions */
+        .team-member-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .member-action-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 4px;
+            color: #a1a1aa;
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .member-action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+        .member-action-btn.danger:hover {
+            background: rgba(255, 82, 82, 0.3);
+            color: #ff5252;
+        }
+        .member-action-btn.primary:hover {
+            background: rgba(0, 217, 255, 0.3);
+            color: #00d9ff;
+        }
+
+        /* Invitation Status */
+        .invitation-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .invitation-section-title {
+            font-size: 0.9rem;
+            color: #8892a0;
+            margin-bottom: 12px;
+        }
+        .invitation-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .invitation-status {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .status-pending { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+        .status-accepted { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+        .status-cancelled { background: rgba(255, 82, 82, 0.2); color: #ff5252; }
+        .status-expired { background: rgba(255, 255, 255, 0.1); color: #a1a1aa; }
+
+        /* Project Page */
+        .project-page {
+            min-height: 100vh;
+        }
+
+        /* Projects Dashboard */
+        .dashboard-container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            display: none;
+        }
+        .dashboard-container.visible {
+            display: block;
+        }
+        .dashboard-header {
+            padding: 30px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
+        }
+        .dashboard-logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .dashboard-user {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .dashboard-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+        .dashboard-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .dashboard-subtitle {
+            color: #8892a0;
+            margin-bottom: 30px;
+        }
+
+        /* Pending Invitations Section */
+        .pending-invitations {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .pending-invitations-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .pending-invitations-icon {
+            font-size: 1.5rem;
+        }
+        .pending-invitations-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #ffc107;
+        }
+        .pending-invitations-count {
+            background: #ffc107;
+            color: #1a1a2e;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .invitation-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.3s ease;
+        }
+        .invitation-card:last-child {
+            margin-bottom: 0;
+        }
+        .invitation-info {
+            flex: 1;
+        }
+        .invitation-project-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        .invitation-project-desc {
+            font-size: 0.85rem;
+            color: #8892a0;
+            margin-bottom: 8px;
+        }
+        .invitation-role {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.1);
+            color: #a1a1aa;
+        }
+        .invitation-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .invitation-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        .invitation-btn-accept {
+            background: linear-gradient(135deg, #00d9ff, #00ff88);
+            color: #1a1a2e;
+        }
+        .invitation-btn-accept:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 217, 255, 0.3);
+        }
+        .invitation-btn-reject {
+            background: rgba(255, 255, 255, 0.1);
+            color: #a1a1aa;
+        }
+        .invitation-btn-reject:hover {
+            background: rgba(255, 82, 82, 0.2);
+            color: #ff5252;
+        }
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 24px;
+        }
+        .project-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .project-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(0, 217, 255, 0.5);
+            box-shadow: 0 12px 40px rgba(0, 217, 255, 0.15);
+        }
+        .project-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .project-card:hover::before {
+            opacity: 1;
+        }
+        .project-card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(0, 217, 255, 0.2), rgba(0, 255, 136, 0.2));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 16px;
+        }
+        .project-card-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+        .project-card-description {
+            font-size: 0.9rem;
+            color: #8892a0;
+            margin-bottom: 16px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 40px;
+        }
+        .project-card-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        .project-card-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .project-card-role {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        .project-card-role.owner { background: rgba(0, 217, 255, 0.2); color: #00d9ff; }
+        .project-card-role.editor { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+        .project-card-role.viewer { background: rgba(255, 255, 255, 0.1); color: #a1a1aa; }
+
+        /* New Project Card */
+        .project-card-new {
+            background: transparent;
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+            text-align: center;
+        }
+        .project-card-new:hover {
+            border-color: #00d9ff;
+            background: rgba(0, 217, 255, 0.05);
+            transform: translateY(-4px);
+        }
+        .project-card-new-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: #8892a0;
+            margin-bottom: 16px;
+            transition: all 0.3s;
+        }
+        .project-card-new:hover .project-card-new-icon {
+            background: rgba(0, 217, 255, 0.2);
+            color: #00d9ff;
+        }
+        .project-card-new-text {
+            font-size: 1rem;
+            color: #8892a0;
+            transition: color 0.3s;
+        }
+        .project-card-new:hover .project-card-new-text {
+            color: #00d9ff;
+        }
+
+        /* Empty State */
+        .dashboard-empty {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        .dashboard-empty-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        .dashboard-empty-title {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        .dashboard-empty-text {
+            color: #8892a0;
+            margin-bottom: 30px;
+        }
+
+        /* Invite Form */
+        .invite-form {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        .invite-form input {
+            flex: 1;
+        }
+        .invite-form select {
+            width: 120px;
+        }
+
+        /* Data Upload Section */
+        .data-section {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .data-upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .data-upload-area:hover {
+            border-color: #00d9ff;
+            background: rgba(0, 217, 255, 0.05);
+        }
+        .data-upload-area.drag-over {
+            border-color: #00ff88;
+            background: rgba(0, 255, 136, 0.1);
+            transform: scale(1.02);
+        }
+        .data-upload-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        .data-file-list {
+            margin-top: 16px;
+        }
+        .data-file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .data-file-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .data-file-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: rgba(0, 217, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .data-file-name {
+            font-size: 0.95rem;
+        }
+        .data-file-meta {
+            font-size: 0.8rem;
+            color: #8892a0;
+        }
+
+        /* Login Overlay */
+        .login-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .login-overlay.visible { display: flex; }
+        .login-box {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        .login-logo {
+            font-size: 2rem;
+            font-weight: 600;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        .login-subtitle {
+            color: #8892a0;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+        }
+        .login-divider {
+            display: flex;
+            align-items: center;
+            margin: 24px 0;
+            color: #5a6270;
+            font-size: 0.85rem;
+        }
+        .login-divider::before, .login-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .login-divider span { padding: 0 16px; }
+
+        /* Email Auth Form */
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .auth-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #e4e4e4;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .auth-input:focus {
+            border-color: #00d9ff;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .auth-input::placeholder {
+            color: #5a6270;
+        }
+        .auth-btn-email {
+            background: linear-gradient(135deg, #00d9ff, #00ff88);
+            color: #1a1a2e;
+            font-weight: 600;
+        }
+        .auth-btn-email:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        .auth-toggle {
+            margin-top: 16px;
+            font-size: 0.85rem;
+            color: #8892a0;
+        }
+        .auth-toggle a {
+            color: #00d9ff;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .auth-toggle a:hover {
+            text-decoration: underline;
+        }
+        .auth-error {
+            background: rgba(255, 82, 82, 0.1);
+            border: 1px solid rgba(255, 82, 82, 0.3);
+            color: #ff5252;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: none;
+        }
+        .auth-success {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            color: #00ff88;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: none;
+        }
+        .remember-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.85rem;
+        }
+        .remember-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #a1a1aa;
+            cursor: pointer;
+        }
+        .remember-label input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #00d9ff;
+            cursor: pointer;
+        }
+        .forgot-link {
+            color: #00d9ff;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .forgot-link:hover {
+            text-decoration: underline;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 600;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #8892a0;
+            font-size: 1rem;
+        }
+
+        /* Main Navigation Tabs */
+        .main-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 6px;
+            border-radius: 12px;
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .main-tab {
+            padding: 12px 28px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #8892a0;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .main-tab:hover {
+            color: #e4e4e4;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .main-tab.active {
+            background: linear-gradient(135deg, #00d9ff, #00ff88);
+            color: #1a1a2e;
+        }
+
+        .main-tab-content {
+            display: none;
+        }
+
+        .main-tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Cards */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 28px;
+            margin-bottom: 24px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #00d9ff, #00ff88);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .card-title {
+            font-size: 1.15rem;
+            font-weight: 500;
+        }
+
+        /* Form Elements */
+        textarea {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            color: #e4e4e4;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.85rem;
+            resize: vertical;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #00d9ff;
+            box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.1);
+        }
+
+        textarea::placeholder {
+            color: #5a6270;
+        }
+
+        .data-input { height: 220px; }
+        .prompt-input { height: 350px; }
+
+        select {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #e4e4e4;
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238892a0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+        }
+
+        select:hover { border-color: #00d9ff; }
+        select:focus {
+            outline: none;
+            border-color: #00d9ff;
+            box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.1);
+        }
+        select option { background: #1a1a2e; color: #e4e4e4; }
+
+        .company-select { margin-left: auto; min-width: 150px; }
+        .data-selectors { display: flex; gap: 8px; margin-left: auto; }
+        .data-selectors .company-select { margin-left: 0; min-width: 140px; }
+        .version-select { min-width: 90px; }
+        .version-select-small { min-width: 70px; padding: 8px 12px; font-size: 0.85rem; padding-right: 30px; }
+
+        .version-selectors {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .model-select {
+            min-width: 110px;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            padding-right: 30px;
+        }
+
+        .version-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            color: #8892a0;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #00d9ff, #00ff88);
+            color: #1a1a2e;
+            border: none;
+            padding: 14px 28px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 217, 255, 0.3);
+        }
+
+        .btn:active { transform: translateY(0); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #e4e4e4;
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: none;
+        }
+
+        .btn-small { padding: 10px 18px; font-size: 0.9rem; }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Prompt Tabs */
+        .prompt-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .prompt-tab {
+            padding: 10px 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #8892a0;
+            font-size: 0.9rem;
+        }
+
+        .prompt-tab:hover { background: rgba(255, 255, 255, 0.08); }
+        .prompt-tab.active {
+            background: rgba(0, 217, 255, 0.15);
+            border-color: rgba(0, 217, 255, 0.4);
+            color: #00d9ff;
+        }
+
+        .prompt-tab-content { display: none; }
+        .prompt-tab-content.active { display: block; }
+
+        .prompt-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .prompt-label { font-weight: 500; color: #b0b0b0; font-size: 0.9rem; }
+        .version-badge {
+            font-size: 0.75rem;
+            color: #00d9ff;
+            background: rgba(0, 217, 255, 0.1);
+            padding: 4px 10px;
+            border-radius: 12px;
+            margin-left: auto;
+        }
+
+        /* Results */
+        .result-card { display: none; }
+        .result-card.visible { display: block; animation: fadeIn 0.4s ease; }
+
+        .summary-text {
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 12px;
+            padding: 24px;
+            font-size: 1.05rem;
+            line-height: 1.9;
+            color: #e4e4e4;
+        }
+
+        .error-text {
+            background: rgba(255, 82, 82, 0.1);
+            border: 1px solid rgba(255, 82, 82, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            color: #ff5252;
+        }
+
+        .success-text {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: #00ff88;
+            margin-top: 16px;
+            font-size: 0.9rem;
+        }
+
+        .loading {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 30px;
+            color: #00d9ff;
+        }
+        .loading.visible { display: flex; }
+
+        .spinner {
+            width: 28px;
+            height: 28px;
+            border: 3px solid rgba(0, 217, 255, 0.2);
+            border-top-color: #00d9ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .stats {
+            display: flex;
+            gap: 24px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #8892a0;
+        }
+        .stat-value { color: #00d9ff; font-weight: 600; }
+
+        /* Info Box */
+        .info-box {
+            background: rgba(0, 217, 255, 0.05);
+            border: 1px solid rgba(0, 217, 255, 0.2);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            font-size: 0.9rem;
+            color: #a0c4d0;
+        }
+        .info-box code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: #5a6270;
+            font-size: 0.85rem;
+        }
+        footer a { color: #00d9ff; text-decoration: none; }
+
+        /* Runs multiselect */
+        .runs-select {
+            margin-left: auto;
+            min-width: 280px;
+            max-width: 350px;
+            height: 80px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #e4e4e4;
+            padding: 8px;
+            font-size: 0.85rem;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .runs-select:focus {
+            outline: none;
+            border-color: #00d9ff;
+        }
+        .runs-select option {
+            padding: 6px 8px;
+            background: #1a1a2e;
+            color: #e4e4e4;
+        }
+        .runs-select option:checked {
+            background: rgba(0, 217, 255, 0.3);
+            color: #fff;
+        }
+
+        /* Run item */
+        .run-item {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .run-item:last-child {
+            margin-bottom: 0;
+        }
+        .run-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .run-timestamp {
+            font-size: 0.9rem;
+            color: #00d9ff;
+            font-weight: 500;
+        }
+        .run-meta {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .run-tag {
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 10px;
+            border-radius: 12px;
+            color: #8892a0;
+        }
+        .run-summary {
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid rgba(0, 255, 136, 0.15);
+            border-radius: 8px;
+            padding: 16px;
+            font-size: 0.95rem;
+            line-height: 1.8;
+            color: #d0d0d0;
+        }
+        .no-runs {
+            text-align: center;
+            color: #5a6270;
+            padding: 20px;
+            font-size: 0.9rem;
+        }
+
+        /* Validation Scores */
+        .scores-container {
+            display: flex;
+            gap: 16px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+        .score-item {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 12px 16px;
+            text-align: center;
+            min-width: 100px;
+            flex: 1;
+        }
+        .score-label {
+            font-size: 0.75rem;
+            color: #8892a0;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+        .score-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        .score-value.high { color: #00ff88; }
+        .score-value.medium { color: #ffd700; }
+        .score-value.low { color: #ff5252; }
+        .run-scores {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .run-score {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .run-score.high { border: 1px solid rgba(0, 255, 136, 0.4); color: #00ff88; }
+        .run-score.medium { border: 1px solid rgba(255, 215, 0, 0.4); color: #ffd700; }
+        .run-score.low { border: 1px solid rgba(255, 82, 82, 0.4); color: #ff5252; }
+
+        /* Testing View Styles */
+        .test-config { margin-bottom: 20px; }
+        .config-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .test-progress {
+            margin-top: 24px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+        }
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+        }
+        .progress-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            transition: width 0.3s ease;
+        }
+        .live-scores {
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: #8892a0;
+        }
+
+        .session-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .summary-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 16px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .summary-label {
+            font-size: 0.75rem;
+            color: #8892a0;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .summary-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .results-table-container {
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        .results-table th, .results-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .results-table th {
+            background: rgba(0, 0, 0, 0.3);
+            position: sticky;
+            top: 0;
+            font-weight: 500;
+            color: #8892a0;
+        }
+        .results-table tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .results-table .score-cell {
+            font-weight: 600;
+        }
+
+        .sessions-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .session-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .session-item:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+        .session-item.selected {
+            border: 1px solid rgba(0, 217, 255, 0.5);
+            background: rgba(0, 217, 255, 0.1);
+        }
+        .session-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .session-info {
+            flex: 1;
+        }
+        .session-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        .session-meta {
+            font-size: 0.8rem;
+            color: #8892a0;
+        }
+        .session-scores {
+            display: flex;
+            gap: 8px;
+        }
+        .mini-score {
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .analysis-section {
+            margin-bottom: 24px;
+        }
+        .analysis-title {
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 12px;
+            color: #00d9ff;
+        }
+        .issue-bars {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .issue-bar {
+            flex: 1;
+            min-width: 150px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 12px;
+            border-radius: 8px;
+        }
+        .issue-bar-label {
+            font-size: 0.8rem;
+            color: #8892a0;
+            margin-bottom: 4px;
+        }
+        .issue-bar-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #ff5252;
+        }
+
+        .customer-analysis {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .customer-analysis-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .customer-id {
+            font-weight: 600;
+            color: #00d9ff;
+        }
+        .customer-issues {
+            display: flex;
+            gap: 6px;
+        }
+        .issue-tag {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(255, 82, 82, 0.2);
+            color: #ff5252;
+        }
+        .analysis-toggle {
+            font-size: 0.8rem;
+            color: #00d9ff;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .analysis-details {
+            display: none;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .analysis-details.visible { display: block; }
+        .analysis-text {
+            font-size: 0.85rem;
+            color: #b0b0b0;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            margin-top: 16px;
+        }
+        .comparison-table th, .comparison-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .comparison-table th {
+            background: rgba(0, 0, 0, 0.3);
+            text-align: left;
+        }
+        .diff-positive { color: #00ff88; }
+        .diff-negative { color: #ff5252; }
+
+        /* Session download button */
+        .session-download-btn {
+            padding: 6px 10px !important;
+            font-size: 0.8rem !important;
+            min-width: auto !important;
+            margin-left: 8px;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .session-item:hover .session-download-btn {
+            opacity: 1;
+        }
+
+        /* Clickable customer rows */
+        .comparison-table tr.clickable-row {
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .comparison-table tr.clickable-row:hover {
+            background: rgba(0, 217, 255, 0.1);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 40px 20px;
+            overflow-y: auto;
+        }
+        .modal-overlay.visible { display: flex; }
+
+        .modal {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 1200px;
+            max-height: calc(100vh - 80px);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: modalSlideIn 0.3s ease;
+        }
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 28px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
+        }
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #00d9ff;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .modal-close {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #8892a0;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.3rem;
+            transition: all 0.2s;
+        }
+        .modal-close:hover {
+            background: rgba(255, 82, 82, 0.2);
+            color: #ff5252;
+        }
+
+        .modal-tabs {
+            display: flex;
+            gap: 4px;
+            padding: 16px 28px;
+            background: rgba(0, 0, 0, 0.15);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .modal-tab {
+            padding: 10px 20px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #8892a0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        .modal-tab:hover { background: rgba(255, 255, 255, 0.05); }
+        .modal-tab.active {
+            background: rgba(0, 217, 255, 0.15);
+            border-color: rgba(0, 217, 255, 0.4);
+            color: #00d9ff;
+        }
+
+        .modal-body {
+            padding: 24px 28px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .compare-panel {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .compare-panel-header {
+            padding: 14px 18px;
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .compare-panel-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #00d9ff;
+        }
+        .compare-panel-meta {
+            font-size: 0.8rem;
+            color: #8892a0;
+        }
+        .compare-panel-scores {
+            display: flex;
+            gap: 8px;
+        }
+        .compare-panel-score {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .compare-panel-score.high { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+        .compare-panel-score.medium { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+        .compare-panel-score.low { background: rgba(255, 82, 82, 0.2); color: #ff5252; }
+
+        .compare-panel-body {
+            padding: 16px 18px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+            line-height: 1.7;
+            color: #d0d0d0;
+        }
+        .compare-panel-body.prompt-content {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            color: #b0b0b0;
+        }
+
+        .input-section {
+            margin-bottom: 24px;
+        }
+        .input-section-title {
+            font-size: 0.85rem;
+            color: #8892a0;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+        .input-content {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 16px;
+            font-size: 0.85rem;
+            color: #b0b0b0;
+            max-height: 200px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 900px) {
+            .compare-grid { grid-template-columns: 1fr; }
+            .modal { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Project Page (hidden by default, shown when project selected) -->
+    <div class="project-page" id="projectPage" style="display: none;">
+        <div class="container">
+            <header>
+                <!-- Project Header -->
+                <div class="project-header" id="projectHeader">
+                    <button class="back-to-dashboard" onclick="backToDashboard()" title="Back to Projects">
+                        <span class="back-icon">←</span>
+                        <span class="back-text">Projects</span>
+                    </button>
+                    <div class="project-title-area">
+                        <h1 class="project-title" id="projectTitle">Project Name</h1>
+                        <span class="project-role-badge" id="projectRoleBadge">owner</span>
+                    </div>
+                    <button class="project-settings-btn" onclick="openProjectModal('settings')" title="Project Settings">
+                        <span>⚙️</span>
+                        <span>Settings</span>
+                    </button>
+                </div>
+            </header>
+
+        <!-- Main Navigation -->
+        <div class="main-tabs">
+            <button class="main-tab" onclick="switchMainTab('data')" id="dataTabBtn" style="display: none;">📁 Data</button>
+            <button class="main-tab active" onclick="switchMainTab('prompts')">⚙️ Prompt</button>
+            <button class="main-tab" onclick="switchMainTab('summarize')">👁️ Preview</button>
+            <button class="main-tab" onclick="switchMainTab('testing')">🧪 Test</button>
+        </div>
+
+        <!-- Summarize Tab -->
+        <div class="main-tab-content" id="summarizeTab">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📊</div>
+                    <h2 class="card-title">Veri Girişi</h2>
+                    <select class="company-select" id="rowSelect" onchange="loadProjectRow()">
+                        <option value="">-- Select Record --</option>
+                    </select>
+                </div>
+
+                <textarea class="data-input" id="dataInput" placeholder="Select a record or paste data manually..."></textarea>
+
+                <div class="btn-group">
+                    <div class="version-selectors">
+                        <label class="version-label">
+                            <span>Sys:</span>
+                            <select class="version-select-small" id="previewSystemVersion" onchange="syncVersionSelect('system')">
+                                {% for v in system_versions %}
+                                <option value="{{ v }}" {% if loop.last %}selected{% endif %}>{{ v }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label class="version-label">
+                            <span>Usr:</span>
+                            <select class="version-select-small" id="previewUserVersion" onchange="syncVersionSelect('user')">
+                                {% for v in user_versions %}
+                                <option value="{{ v }}" {% if loop.last %}selected{% endif %}>{{ v }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label class="version-label">
+                            <span>Model:</span>
+                            <select class="model-select" id="modelSelect">
+                                <option value="google/gemma-3-27b-it">Gemma3 27B</option>
+                                <option value="google/gemma-3-12b-it">Gemma3 12B</option>
+                            </select>
+                        </label>
+                    </div>
+                    <button class="btn" onclick="summarize()" id="submitBtn">
+                        ✨ Özetle
+                    </button>
+                </div>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <span>Özet oluşturuluyor...</span>
+            </div>
+
+            <div class="card result-card" id="resultCard">
+                <div class="card-header">
+                    <div class="card-icon">📝</div>
+                    <h2 class="card-title">Özet</h2>
+                </div>
+                <div id="resultContent"></div>
+                <div class="stats" id="stats"></div>
+            </div>
+
+            <!-- Previous Runs -->
+            <div class="card" id="runsCard" style="display: none;">
+                <div class="card-header">
+                    <div class="card-icon">📚</div>
+                    <h2 class="card-title">Önceki Çalışmalar</h2>
+                    <select class="runs-select" id="runsSelect" multiple onchange="loadSelectedRuns()">
+                    </select>
+                </div>
+                <div id="runsContent"></div>
+            </div>
+        </div>
+
+        <!-- Testing Tab -->
+        <div class="main-tab-content" id="testingTab">
+            <div class="info-box">
+                🧪 Tüm müşteriler için toplu test çalıştırın, sonuçları karşılaştırın ve düşük skorlu müşterileri analiz edin.
+            </div>
+
+            <!-- Test Configuration -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">⚙️</div>
+                    <h2 class="card-title">Test Konfigürasyonu</h2>
+                </div>
+
+                <div class="test-config">
+                    <div class="config-row">
+                        <label class="version-label">
+                            <span>System Prompt:</span>
+                            <select class="version-select" id="testSystemVersion">
+                                {% for v in system_versions %}
+                                <option value="{{ v }}" {% if loop.last %}selected{% endif %}>{{ v }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label class="version-label">
+                            <span>User Prompt:</span>
+                            <select class="version-select" id="testUserVersion">
+                                {% for v in user_versions %}
+                                <option value="{{ v }}" {% if loop.last %}selected{% endif %}>{{ v }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label class="version-label">
+                            <span>Model:</span>
+                            <select class="model-select" id="testModelSelect">
+                                <option value="google/gemma-3-27b-it">Gemma3 27B</option>
+                                <option value="google/gemma-3-12b-it">Gemma3 12B</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn" onclick="startTestSession()" id="startTestBtn">
+                            🚀 Testi Başlat
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Progress -->
+                <div class="test-progress" id="testProgress" style="display: none;">
+                    <div class="progress-header">
+                        <span id="progressText">0 / 0 tamamlandı</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                    </div>
+                    <div class="live-scores" id="liveScores">
+                        <span>Ortalama: C: - | F: - | L: - | A: -</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Session Results -->
+            <div class="card" id="sessionResultsCard" style="display: none;">
+                <div class="card-header">
+                    <div class="card-icon">📊</div>
+                    <h2 class="card-title">Test Sonuçları</h2>
+                    <button class="btn btn-small btn-secondary" onclick="downloadSessionReport()" style="margin-left: auto;">
+                        📥 Rapor İndir
+                    </button>
+                </div>
+
+                <div class="session-summary" id="sessionSummary"></div>
+
+                <div class="results-table-container">
+                    <table class="results-table" id="resultsTable">
+                        <thead>
+                            <tr>
+                                <th>Müşteri</th>
+                                <th>Tamlık</th>
+                                <th>Doğruluk</th>
+                                <th>Akıcılık</th>
+                                <th>Analiz</th>
+                                <th>Süre</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Low Score Analysis -->
+            <div class="card" id="analysisCard" style="display: none;">
+                <div class="card-header">
+                    <div class="card-icon">🔍</div>
+                    <h2 class="card-title">Düşük Skor Analizi</h2>
+                    <select class="version-select" id="thresholdSelect" onchange="loadAnalysis()">
+                        <option value="50">Eşik: 50</option>
+                        <option value="60">Eşik: 60</option>
+                        <option value="70">Eşik: 70</option>
+                        <option value="80">Eşik: 80</option>
+                    </select>
+                </div>
+                <div id="analysisContent"></div>
+            </div>
+
+            <!-- Session History & Comparison -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📚</div>
+                    <h2 class="card-title">Geçmiş Oturumlar</h2>
+                    <button class="btn btn-small btn-secondary" onclick="loadSessions()">🔄 Yenile</button>
+                </div>
+
+                <div class="sessions-list" id="sessionsList">
+                    <div class="no-runs">Henüz test oturumu yok</div>
+                </div>
+
+                <div class="btn-group" id="compareGroup" style="display: none;">
+                    <button class="btn btn-secondary" onclick="compareSessions()">
+                        📊 Seçilenleri Karşılaştır
+                    </button>
+                </div>
+            </div>
+
+            <!-- Comparison Results -->
+            <div class="card" id="comparisonCard" style="display: none;">
+                <div class="card-header">
+                    <div class="card-icon">⚖️</div>
+                    <h2 class="card-title">Karşılaştırma</h2>
+                    <button class="btn btn-small btn-secondary" onclick="downloadComparisonReport()" style="margin-left: auto;">
+                        📥 Karşılaştırma İndir
+                    </button>
+                </div>
+                <div id="comparisonContent"></div>
+            </div>
+        </div>
+
+        <!-- Prompts Tab -->
+        <div class="main-tab-content active" id="promptsTab">
+            <div class="info-box">
+                💡 Kural tabanlı cümleleri akıcı metinlere dönüştürmek için promptları düzenleyin.
+                Şablon değişkenleri: <code>{company_name}</code> (müşteri no) ve <code>{data_rows}</code> (kural tabanlı cümleler)
+            </div>
+
+            <div class="card">
+                <div class="prompt-tabs">
+                    <button class="prompt-tab active" onclick="switchPromptTab('system')">System Prompt</button>
+                    <button class="prompt-tab" onclick="switchPromptTab('user')">User Prompt</button>
+                </div>
+
+                <!-- System Prompt -->
+                <div class="prompt-tab-content active" id="systemPromptTab">
+                    <div class="prompt-header">
+                        <span class="prompt-label">Versiyon:</span>
+                        <select class="version-select" id="systemVersionSelect" onchange="loadPrompt('system'); syncToPreview('system');">
+                            {% for v in system_versions %}
+                            <option value="{{ v }}" {% if loop.last %}selected{% endif %}>{{ v }}{% if v == '000' %} (base){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <textarea class="prompt-input" id="systemPromptInput" placeholder="System prompt yükleniyor..."></textarea>
+                    <div class="btn-group">
+                        <button class="btn" onclick="savePrompt('system')">
+                            💾 Yeni Versiyon Kaydet
+                        </button>
+                        <button class="btn btn-secondary" onclick="loadPrompt('system')">
+                            🔄 Sıfırla
+                        </button>
+                    </div>
+                    <div id="systemSaveResult"></div>
+                </div>
+
+                <!-- User Prompt -->
+                <div class="prompt-tab-content" id="userPromptTab">
+                    <div class="prompt-header">
+                        <span class="prompt-label">Versiyon:</span>
+                        <select class="version-select" id="userVersionSelect" onchange="loadPrompt('user'); syncToPreview('user');">
+                            {% for v in user_versions %}
+                            <option value="{{ v }}" {% if loop.last %}selected{% endif %}>{{ v }}{% if v == '000' %} (base){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <textarea class="prompt-input" id="userPromptInput" placeholder="User prompt yükleniyor..."></textarea>
+                    <div class="btn-group">
+                        <button class="btn" onclick="savePrompt('user')">
+                            💾 Yeni Versiyon Kaydet
+                        </button>
+                        <button class="btn btn-secondary" onclick="loadPrompt('user')">
+                            🔄 Sıfırla
+                        </button>
+                    </div>
+                    <div id="userSaveResult"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Tab Content -->
+        <div class="main-tab-content" id="dataTab" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📁</div>
+                    <h2 class="card-title">Project Data</h2>
+                </div>
+
+                <div class="data-upload-area" id="dataUploadArea">
+                    <div class="data-upload-icon">📤</div>
+                    <p>Click to upload or drag and drop</p>
+                    <p style="font-size: 0.85rem; color: #8892a0;">CSV, JSON, or Excel files</p>
+                    <input type="file" id="dataFileInput" style="display: none;" accept=".csv,.json,.xlsx,.xls">
+                </div>
+
+                <div class="data-file-list" id="dataFileList">
+                    <!-- Data files will be listed here -->
+                </div>
+            </div>
+        </div>
+        </div> <!-- Close container -->
+    </div> <!-- Close project-page -->
+
+    <!-- Project Modal (outside project-page so it can be accessed from dashboard) -->
+    <div class="project-modal" id="projectModal">
+        <div class="project-modal-content">
+            <div class="project-modal-header">
+                <span class="project-modal-title" id="projectModalTitle">New Project</span>
+                <button class="project-modal-close" onclick="closeProjectModal()">&times;</button>
+            </div>
+
+            <form id="projectForm" onsubmit="saveProject(event)">
+                <div class="project-form-group">
+                    <label class="project-form-label">Project Name</label>
+                    <input type="text" class="project-form-input" id="projectName" placeholder="My Prompt Project" required>
+                </div>
+
+                <div class="project-form-group">
+                    <label class="project-form-label">Description</label>
+                    <textarea class="project-form-input project-form-textarea" id="projectDescription" placeholder="Optional description..."></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Save Project</button>
+            </form>
+
+            <!-- Team Section (visible in settings mode) -->
+            <div class="team-section" id="teamSection" style="display: none;">
+                <h3 class="team-section-title">Team Members</h3>
+                <div id="teamMembersList">
+                    <!-- Team members will be listed here -->
+                </div>
+
+                <!-- Pending Invitations -->
+                <div class="invitation-section" id="invitationsSection">
+                    <h4 class="invitation-section-title">Pending Invitations</h4>
+                    <div id="invitationsList">
+                        <!-- Invitations will be listed here -->
+                    </div>
+                </div>
+
+                <div class="invite-form" id="inviteForm">
+                    <input type="email" class="project-form-input" id="inviteEmail" placeholder="Email address">
+                    <select class="project-form-input" id="inviteRole">
+                        <option value="viewer">Viewer</option>
+                        <option value="editor">Editor</option>
+                    </select>
+                    <button type="button" class="btn btn-primary" onclick="inviteTeamMember()">Invite</button>
+                </div>
+            </div>
+
+            <!-- Data Section (visible in settings mode) -->
+            <div class="data-section" id="dataSection" style="display: none;">
+                <h3 class="team-section-title">Project Data Files</h3>
+                <div id="projectDataList">
+                    <!-- Data files will be listed here -->
+                </div>
+            </div>
+
+            <!-- Danger Zone (visible in settings mode for owners) -->
+            <div class="team-section" id="dangerZone" style="display: none;">
+                <h3 class="team-section-title" style="color: #ff5252;">Danger Zone</h3>
+                <button type="button" class="btn" style="background: rgba(255, 82, 82, 0.2); color: #ff5252; width: 100%;" onclick="deleteProject()">
+                    Delete Project
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Overlay -->
+    <div class="login-overlay visible" id="loginOverlay">
+        <div class="login-box">
+            <div class="login-logo">PromptHist</div>
+            <p class="login-subtitle" id="authSubtitle">Sign in to access prompt testing and history</p>
+
+            <div class="auth-error" id="authError"></div>
+            <div class="auth-success" id="authSuccess"></div>
+
+            <button class="auth-btn auth-btn-google" onclick="signInWithGoogle()" style="width: 100%; justify-content: center;">
+                <svg class="google-icon" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                Continue with Google
+            </button>
+
+            <div class="login-divider"><span>or continue with email</span></div>
+
+            <!-- Sign In Form -->
+            <form class="auth-form" id="signInForm" onsubmit="signInWithEmail(event)">
+                <input type="email" class="auth-input" id="signInEmail" placeholder="Email address" required>
+                <input type="password" class="auth-input" id="signInPassword" placeholder="Password" required>
+                <div class="remember-row">
+                    <label class="remember-label">
+                        <input type="checkbox" id="rememberMe" checked>
+                        Remember me
+                    </label>
+                    <a class="forgot-link" onclick="forgotPassword()">Forgot password?</a>
+                </div>
+                <button type="submit" class="auth-btn auth-btn-email" style="width: 100%;">Sign In</button>
+            </form>
+
+            <!-- Sign Up Form (hidden by default) -->
+            <form class="auth-form" id="signUpForm" style="display: none;" onsubmit="signUpWithEmail(event)">
+                <input type="email" class="auth-input" id="signUpEmail" placeholder="Email address" required>
+                <input type="password" class="auth-input" id="signUpPassword" placeholder="Password (min 6 characters)" minlength="6" required>
+                <input type="password" class="auth-input" id="signUpPasswordConfirm" placeholder="Confirm password" minlength="6" required>
+                <button type="submit" class="auth-btn auth-btn-email" style="width: 100%;">Create Account</button>
+            </form>
+
+            <p class="auth-toggle" id="authToggle">
+                Don't have an account? <a onclick="toggleAuthMode()">Sign up</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Projects Dashboard -->
+    <div class="dashboard-container" id="dashboardContainer">
+        <div class="dashboard-header">
+            <div class="dashboard-logo">PromptHist</div>
+            <div class="dashboard-user">
+                <div class="user-info" id="dashboardUserInfo">
+                    <img class="user-avatar" id="dashboardUserAvatar" src="" alt="">
+                    <span class="user-name" id="dashboardUserName"></span>
+                </div>
+                <button class="auth-btn auth-btn-logout" onclick="signOut()">Sign Out</button>
+            </div>
+        </div>
+        <div class="dashboard-content">
+            <h1 class="dashboard-title">Your Projects</h1>
+            <p class="dashboard-subtitle">Select a project to start testing prompts or create a new one</p>
+
+            <!-- Pending Invitations Section -->
+            <div class="pending-invitations" id="pendingInvitations" style="display: none;">
+                <div class="pending-invitations-header">
+                    <span class="pending-invitations-icon">📬</span>
+                    <span class="pending-invitations-title">Pending Invitations</span>
+                    <span class="pending-invitations-count" id="invitationsCount">0</span>
+                </div>
+                <div id="pendingInvitationsList">
+                    <!-- Invitation cards will be rendered here -->
+                </div>
+            </div>
+
+            <div class="projects-grid" id="projectsGrid">
+                <!-- Project cards will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparison Detail Modal -->
+    <div class="modal-overlay" id="comparisonModal" onclick="closeModalOnOverlay(event)">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span>📋</span>
+                    <span>Müşteri Karşılaştırması: <span id="modalCustomerId"></span></span>
+                </div>
+                <button class="modal-close" onclick="closeComparisonModal()">×</button>
+            </div>
+
+            <div class="modal-tabs">
+                <button class="modal-tab active" onclick="switchModalTab('outputs')">📝 Çıktılar</button>
+                <button class="modal-tab" onclick="switchModalTab('prompts')">⚙️ Promptlar</button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Input Section (always visible) -->
+                <div class="input-section">
+                    <div class="input-section-title">📥 Girdi (Her İki Model İçin Aynı)</div>
+                    <div class="input-content" id="modalInputContent"></div>
+                </div>
+
+                <!-- Outputs Tab Content -->
+                <div id="modalOutputsTab">
+                    <div class="compare-grid" id="modalOutputsGrid"></div>
+                </div>
+
+                <!-- Prompts Tab Content -->
+                <div id="modalPromptsTab" style="display: none;">
+                    <div class="compare-grid" id="modalPromptsGrid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <a href="https://prompthist.com" target="_blank">PromptHist</a> · Powered by <a href="https://openrouter.ai" target="_blank">OpenRouter</a>
+    </footer>
+
+    <script>
+        // Supabase Auth Configuration
+        const SUPABASE_URL = '{{ supabase_url }}';
+        const SUPABASE_ANON_KEY = '{{ supabase_anon_key }}';
+
+        // Initialize Supabase client
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Current user session
+        let currentUser = null;
+
+        // Current company name
+        let currentCompanyName = '';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Check auth state
+            await checkAuthState();
+
+            // Listen for auth state changes
+            supabaseClient.auth.onAuthStateChange(async (event, session) => {
+                console.log('Auth state change:', event, session);
+                if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                    if (session) {
+                        currentUser = session.user;
+                        updateAuthUI();
+                        hideLoginOverlay();
+                        showDashboard(); // Show dashboard immediately
+                        await loadProjects();
+                        checkInvitation();
+                    }
+                } else if (event === 'SIGNED_OUT') {
+                    currentUser = null;
+                    projects = [];
+                    currentProject = null;
+                    updateAuthUI();
+                    // Hide both dashboard and project page
+                    document.getElementById('dashboardContainer').classList.remove('visible');
+                    document.getElementById('projectPage').style.display = 'none';
+                    showLoginOverlay();
+                }
+            });
+
+            // Initialize data upload area
+            initDataUploadArea();
+
+            loadPrompt('system');
+            loadPrompt('user');
+        });
+
+        // Check current auth state
+        async function checkAuthState() {
+            try {
+                console.log('Checking auth state...');
+                const { data: { session }, error } = await supabaseClient.auth.getSession();
+                console.log('Session result:', session, error);
+                if (error) throw error;
+
+                if (session) {
+                    console.log('User authenticated:', session.user.email);
+                    currentUser = session.user;
+                    updateAuthUI();
+                    hideLoginOverlay();
+                    showDashboard(); // Show dashboard immediately
+                    await loadProjects();
+                    checkInvitation();
+                } else {
+                    console.log('No session found, showing login');
+                    showLoginOverlay();
+                }
+            } catch (error) {
+                console.error('Auth check error:', error);
+                showLoginOverlay();
+            }
+        }
+
+        // Sign in with Google
+        async function signInWithGoogle() {
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: window.location.origin + '/app'
+                    }
+                });
+                if (error) throw error;
+            } catch (error) {
+                console.error('Sign in error:', error);
+                alert('Giriş hatası: ' + error.message);
+            }
+        }
+
+        // Sign out
+        async function signOut() {
+            try {
+                const { error } = await supabaseClient.auth.signOut();
+                if (error) throw error;
+            } catch (error) {
+                console.error('Sign out error:', error);
+                alert('Çıkış hatası: ' + error.message);
+            }
+        }
+
+        // Sign in with email
+        async function signInWithEmail(event) {
+            event.preventDefault();
+            clearAuthMessages();
+
+            const email = document.getElementById('signInEmail').value;
+            const password = document.getElementById('signInPassword').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+
+            console.log('Attempting sign in for:', email);
+
+            // Save remember me preference
+            localStorage.setItem('rememberMe', rememberMe.toString());
+
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                console.log('Sign in result:', data, error);
+
+                if (error) throw error;
+
+                console.log('Sign in successful, waiting for auth state change...');
+                // Success - auth state change listener will handle UI update
+            } catch (error) {
+                console.error('Sign in error:', error);
+                showAuthError(error.message);
+            }
+        }
+
+        // Sign up with email
+        async function signUpWithEmail(event) {
+            event.preventDefault();
+            clearAuthMessages();
+
+            const email = document.getElementById('signUpEmail').value;
+            const password = document.getElementById('signUpPassword').value;
+            const passwordConfirm = document.getElementById('signUpPasswordConfirm').value;
+
+            if (password !== passwordConfirm) {
+                showAuthError('Passwords do not match');
+                return;
+            }
+
+            try {
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        emailRedirectTo: window.location.origin + '/app'
+                    }
+                });
+
+                if (error) throw error;
+
+                // Check if email confirmation is required
+                if (data.user && data.user.identities && data.user.identities.length === 0) {
+                    showAuthError('This email is already registered. Please sign in instead.');
+                } else {
+                    showAuthSuccess('Account created! Please check your email to confirm your account.');
+                    // Clear form
+                    document.getElementById('signUpForm').reset();
+                }
+            } catch (error) {
+                console.error('Sign up error:', error);
+                showAuthError(error.message);
+            }
+        }
+
+        // Toggle between sign in and sign up modes
+        let isSignUpMode = false;
+        function toggleAuthMode() {
+            isSignUpMode = !isSignUpMode;
+            clearAuthMessages();
+
+            const signInForm = document.getElementById('signInForm');
+            const signUpForm = document.getElementById('signUpForm');
+            const authToggle = document.getElementById('authToggle');
+            const authSubtitle = document.getElementById('authSubtitle');
+
+            if (isSignUpMode) {
+                signInForm.style.display = 'none';
+                signUpForm.style.display = 'flex';
+                authToggle.innerHTML = 'Already have an account? <a onclick="toggleAuthMode()">Sign in</a>';
+                authSubtitle.textContent = 'Create your account to get started';
+            } else {
+                signInForm.style.display = 'flex';
+                signUpForm.style.display = 'none';
+                authToggle.innerHTML = 'Don\'t have an account? <a onclick="toggleAuthMode()">Sign up</a>';
+                authSubtitle.textContent = 'Sign in to access prompt testing and history';
+            }
+        }
+
+        // Show auth error message
+        function showAuthError(message) {
+            const errorDiv = document.getElementById('authError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        // Show auth success message
+        function showAuthSuccess(message) {
+            const successDiv = document.getElementById('authSuccess');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+        }
+
+        // Clear auth messages
+        function clearAuthMessages() {
+            document.getElementById('authError').style.display = 'none';
+            document.getElementById('authSuccess').style.display = 'none';
+        }
+
+        // Forgot password
+        async function forgotPassword() {
+            clearAuthMessages();
+            const email = document.getElementById('signInEmail').value;
+
+            if (!email) {
+                showAuthError('Please enter your email address first');
+                return;
+            }
+
+            try {
+                const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+                    redirectTo: window.location.origin + '/app'
+                });
+
+                if (error) throw error;
+
+                showAuthSuccess('Password reset link sent! Check your email.');
+            } catch (error) {
+                console.error('Password reset error:', error);
+                showAuthError(error.message);
+            }
+        }
+
+        // Handle remember me - clear session on browser close if not checked
+        window.addEventListener('beforeunload', function() {
+            const rememberMe = localStorage.getItem('rememberMe');
+            if (rememberMe === 'false') {
+                supabaseClient.auth.signOut();
+            }
+        });
+
+        // Update auth UI (now handled by dashboard)
+        function updateAuthUI() {
+            // Auth UI is now managed by the dashboard user info section
+            // This function is kept for compatibility but does nothing
+        }
+
+        // Show login overlay
+        function showLoginOverlay() {
+            document.getElementById('loginOverlay').classList.add('visible');
+        }
+
+        // Hide login overlay
+        function hideLoginOverlay() {
+            document.getElementById('loginOverlay').classList.remove('visible');
+        }
+
+        // =============================================================================
+        // PROJECT MANAGEMENT
+        // =============================================================================
+
+        let currentProject = null;
+        let projects = [];
+        let projectModalMode = 'create';
+
+        // Get auth headers for API calls
+        async function getAuthHeaders() {
+            const session = await supabaseClient.auth.getSession();
+            if (session.data.session) {
+                return {
+                    'Authorization': `Bearer ${session.data.session.access_token}`,
+                    'Content-Type': 'application/json'
+                };
+            }
+            return { 'Content-Type': 'application/json' };
+        }
+
+        // Load user's projects
+        async function loadProjects() {
+            try {
+                const headers = await getAuthHeaders();
+                const response = await fetch('/api/projects', { headers });
+                const result = await response.json();
+
+                if (result.projects) {
+                    projects = result.projects;
+                    updateProjectDropdown();
+                    renderDashboard();
+                }
+            } catch (error) {
+                console.error('Load projects error:', error);
+            }
+        }
+
+        // Show dashboard (hide project page)
+        function showDashboard() {
+            document.getElementById('projectPage').style.display = 'none';
+            document.getElementById('dashboardContainer').classList.add('visible');
+            updateDashboardUserInfo();
+        }
+
+        // Hide dashboard (show project page)
+        function hideDashboard() {
+            document.getElementById('dashboardContainer').classList.remove('visible');
+            document.getElementById('projectPage').style.display = 'block';
+        }
+
+        // Update dashboard user info
+        function updateDashboardUserInfo() {
+            if (!currentUser) return;
+
+            const avatarUrl = currentUser.user_metadata?.avatar_url || '';
+            const displayName = currentUser.user_metadata?.full_name || currentUser.email || 'User';
+
+            const avatarEl = document.getElementById('dashboardUserAvatar');
+            const nameEl = document.getElementById('dashboardUserName');
+
+            if (avatarUrl) {
+                avatarEl.src = avatarUrl;
+                avatarEl.style.display = 'block';
+            } else {
+                avatarEl.style.display = 'none';
+            }
+            nameEl.textContent = displayName;
+        }
+
+        // Render dashboard with project cards
+        function renderDashboard() {
+            const grid = document.getElementById('projectsGrid');
+
+            let html = '';
+
+            // Render existing project cards
+            if (projects.length > 0) {
+                html += projects.map(p => `
+                    <div class="project-card" onclick="selectProject('${p.id}')">
+                        <span class="project-card-role ${p.role}">${p.role}</span>
+                        <div class="project-card-icon">📊</div>
+                        <div class="project-card-name">${escapeHtml(p.name)}</div>
+                        <div class="project-card-description">${escapeHtml(p.description || 'No description')}</div>
+                        <div class="project-card-meta">
+                            <div class="project-card-meta-item">
+                                <span>📅</span>
+                                <span>${formatDate(p.created_at)}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Add "New Project" card
+            html += `
+                <div class="project-card project-card-new" onclick="openProjectModal('create')">
+                    <div class="project-card-new-icon">+</div>
+                    <div class="project-card-new-text">Create New Project</div>
+                </div>
+            `;
+
+            grid.innerHTML = html;
+
+            // Load pending invitations
+            loadPendingInvitations();
+
+            // Show dashboard
+            showDashboard();
+        }
+
+        // Load pending invitations for current user
+        async function loadPendingInvitations() {
+            try {
+                const headers = await getAuthHeaders();
+                const response = await fetch('/api/my-invitations', { headers });
+                const result = await response.json();
+
+                const container = document.getElementById('pendingInvitationsList');
+                const section = document.getElementById('pendingInvitations');
+                const countBadge = document.getElementById('invitationsCount');
+
+                const invitations = result.invitations || [];
+
+                if (invitations.length > 0) {
+                    section.style.display = 'block';
+                    countBadge.textContent = invitations.length;
+
+                    container.innerHTML = invitations.map(inv => `
+                        <div class="invitation-card" id="invitation-${inv.id}">
+                            <div class="invitation-info">
+                                <div class="invitation-project-name">${escapeHtml(inv.project_name)}</div>
+                                <div class="invitation-project-desc">${escapeHtml(inv.project_description || 'No description')}</div>
+                                <span class="invitation-role">Invited as ${inv.role}</span>
+                            </div>
+                            <div class="invitation-actions">
+                                <button class="invitation-btn invitation-btn-accept" onclick="acceptInvitation('${inv.token}')">
+                                    Accept
+                                </button>
+                                <button class="invitation-btn invitation-btn-reject" onclick="rejectInvitation('${inv.token}', '${inv.id}')">
+                                    Decline
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    section.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Load pending invitations error:', error);
+            }
+        }
+
+        // Accept an invitation
+        async function acceptInvitation(token) {
+            try {
+                const headers = await getAuthHeaders();
+                const response = await fetch('/api/invitations/accept', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ token })
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    // Reload projects and invitations
+                    await loadProjects();
+                    // Select the newly joined project
+                    if (result.project_id) {
+                        selectProject(result.project_id);
+                    }
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to accept invitation'));
+                }
+            } catch (error) {
+                console.error('Accept invitation error:', error);
+                alert('Error accepting invitation');
+            }
+        }
+
+        // Reject an invitation
+        async function rejectInvitation(token, invitationId) {
+            if (!confirm('Are you sure you want to decline this invitation?')) return;
+
+            try {
+                const headers = await getAuthHeaders();
+                const response = await fetch('/api/invitations/reject', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ token })
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    // Remove the invitation card with animation
+                    const card = document.getElementById(`invitation-${invitationId}`);
+                    if (card) {
+                        card.style.opacity = '0';
+                        card.style.transform = 'translateX(-20px)';
+                        setTimeout(() => {
+                            card.remove();
+                            // Update count and hide section if empty
+                            const remaining = document.querySelectorAll('.invitation-card').length;
+                            document.getElementById('invitationsCount').textContent = remaining;
+                            if (remaining === 0) {
+                                document.getElementById('pendingInvitations').style.display = 'none';
+                            }
+                        }, 300);
+                    }
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to decline invitation'));
+                }
+            } catch (error) {
+                console.error('Reject invitation error:', error);
+                alert('Error declining invitation');
+            }
+        }
+
+        // Select a project from dashboard
+        async function selectProject(projectId) {
+            currentProject = projects.find(p => p.id === projectId);
+
+            if (currentProject) {
+                localStorage.setItem('lastProjectId', projectId);
+
+                // Clear previous project data immediately
+                clearProjectData();
+
+                // Update project header
+                document.getElementById('projectTitle').textContent = currentProject.name;
+                const roleBadge = document.getElementById('projectRoleBadge');
+                roleBadge.textContent = currentProject.role;
+                roleBadge.className = 'project-role-badge ' + currentProject.role;
+
+                // Show data tab
+                document.getElementById('dataTabBtn').style.display = 'block';
+
+                // Set default tab based on preloaded data availability (before showing page)
+                if (currentProject.hasData) {
+                    switchMainTab('prompts');
+                } else {
+                    switchMainTab('data');
+                }
+
+                // Hide dashboard, show project page
+                hideDashboard();
+
+                // Load project data in background
+                loadProjectData();
+                loadProjectPrompts();
+                loadSessions();
+            }
+        }
+
+        // Format date for display
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Clear all project-specific data from the UI
+        function clearProjectData() {
+            // Clear selected sessions
+            selectedSessions.clear();
+
+            // Clear prompt inputs
+            document.getElementById('systemPromptInput').value = '';
+            document.getElementById('userPromptInput').value = '';
+
+            // Clear/reset version dropdowns
+            const emptyOption = '<option value="">Loading...</option>';
+            document.getElementById('systemVersionSelect').innerHTML = emptyOption;
+            document.getElementById('userVersionSelect').innerHTML = emptyOption;
+            document.getElementById('previewSystemVersion').innerHTML = emptyOption;
+            document.getElementById('previewUserVersion').innerHTML = emptyOption;
+            document.getElementById('testSystemVersion').innerHTML = emptyOption;
+            document.getElementById('testUserVersion').innerHTML = emptyOption;
+
+            // Clear data input and preview selectors
+            document.getElementById('dataInput').value = '';
+            document.getElementById('rowSelect').innerHTML = '<option value="">-- Select Record --</option>';
+
+            // Clear and hide result card
+            document.getElementById('resultContent').innerHTML = '';
+            document.getElementById('stats').innerHTML = '';
+            document.getElementById('resultCard').style.display = 'none';
+
+            // Clear and hide runs
+            document.getElementById('runsSelect').innerHTML = '';
+            document.getElementById('runsContent').innerHTML = '';
+            document.getElementById('runsCard').style.display = 'none';
+
+            // Clear sessions list
+            document.getElementById('sessionsList').innerHTML = '<div class="no-runs">Loading sessions...</div>';
+
+            // Hide and clear test progress
+            document.getElementById('testProgress').style.display = 'none';
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressText').textContent = '0 / 0 tamamlandı';
+            document.getElementById('progressPercent').textContent = '0%';
+            document.getElementById('liveScores').innerHTML = '<span>Ortalama: C: - | F: - | L: - | A: -</span>';
+
+            // Hide and clear session results
+            document.getElementById('sessionResultsCard').style.display = 'none';
+            document.getElementById('sessionSummary').innerHTML = '';
+            document.getElementById('resultsBody').innerHTML = '';
+
+            // Hide and clear analysis
+            document.getElementById('analysisCard').style.display = 'none';
+            document.getElementById('analysisContent').innerHTML = '';
+
+            // Hide and clear comparison
+            document.getElementById('comparisonCard').style.display = 'none';
+            document.getElementById('comparisonContent').innerHTML = '';
+            document.getElementById('compareGroup').style.display = 'none';
+        }
+
+        // Back to dashboard
+        function backToDashboard() {
+            currentProject = null;
+            document.getElementById('dataTabBtn').style.display = 'none';
+            clearProjectData();
+            showDashboard();
+        }
+
+        // Update project dropdown (kept for compatibility)
+        function updateProjectDropdown() {
+            // No longer using dropdown, but keep function for compatibility
+        }
+
+        // Switch to selected project (kept for compatibility)
+        async function switchProject() {
+            // No longer using dropdown
+            const projectId = null;
+
+            if (!projectId) {
+                currentProject = null;
+                document.getElementById('projectSettingsBtn').style.display = 'none';
+                document.getElementById('dataTabBtn').style.display = 'none';
+                // Go back to dashboard when no project selected
+                showDashboard();
+                return;
+            }
+
+            // Find project in list
+            currentProject = projects.find(p => p.id === projectId);
+
+            if (currentProject) {
+                localStorage.setItem('lastProjectId', projectId);
+                document.getElementById('projectSettingsBtn').style.display = 'block';
+                document.getElementById('dataTabBtn').style.display = 'block';
+
+                // Hide dashboard when a project is selected
+                hideDashboard();
+
+                // Load project-specific data
+                await loadProjectData();
+                await loadProjectPrompts();
+            }
+        }
+
+        // Open project modal
+        function openProjectModal(mode) {
+            projectModalMode = mode;
+            const modal = document.getElementById('projectModal');
+            const title = document.getElementById('projectModalTitle');
+            const teamSection = document.getElementById('teamSection');
+            const dataSection = document.getElementById('dataSection');
+            const dangerZone = document.getElementById('dangerZone');
+            const inviteForm = document.getElementById('inviteForm');
+
+            if (mode === 'create') {
+                title.textContent = 'New Project';
+                document.getElementById('projectName').value = '';
+                document.getElementById('projectDescription').value = '';
+                teamSection.style.display = 'none';
+                dataSection.style.display = 'none';
+                dangerZone.style.display = 'none';
+            } else if (mode === 'settings' && currentProject) {
+                title.textContent = 'Project Settings';
+                document.getElementById('projectName').value = currentProject.name;
+                document.getElementById('projectDescription').value = currentProject.description || '';
+                teamSection.style.display = 'block';
+                dataSection.style.display = 'block';
+                const isOwner = currentProject.role === 'owner';
+                dangerZone.style.display = isOwner ? 'block' : 'none';
+                inviteForm.style.display = isOwner ? 'flex' : 'none';
+                loadTeamMembers();
+                loadProjectDataList();
+            }
+
+            modal.classList.add('visible');
+        }
+
+        // Close project modal
+        function closeProjectModal() {
+            document.getElementById('projectModal').classList.remove('visible');
+        }
+
+        // Save project
+        async function saveProject(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('projectName').value;
+            const description = document.getElementById('projectDescription').value;
+
+            try {
+                const headers = await getAuthHeaders();
+
+                if (projectModalMode === 'create') {
+                    const response = await fetch('/api/projects', {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({ name, description })
+                    });
+                    const result = await response.json();
+
+                    if (result.project) {
+                        // Add the new project with owner role and no data
+                        result.project.role = 'owner';
+                        result.project.hasData = false;
+                        projects.push(result.project);
+                        renderDashboard(); // Refresh dashboard cards
+                        closeProjectModal();
+                        // Select the new project and go to app
+                        selectProject(result.project.id);
+                    } else {
+                        alert('Error: ' + (result.error || 'Failed to create project'));
+                    }
+                } else if (projectModalMode === 'settings' && currentProject) {
+                    const response = await fetch(`/api/projects/${currentProject.id}`, {
+                        method: 'PUT',
+                        headers,
+                        body: JSON.stringify({ name, description })
+                    });
+                    const result = await response.json();
+
+                    if (result.project) {
+                        currentProject.name = name;
+                        currentProject.description = description;
+                        // Update project header title
+                        document.getElementById('projectTitle').textContent = name;
+                        closeProjectModal();
+                    } else {
+                        alert('Error: ' + (result.error || 'Failed to update project'));
+                    }
+                }
+            } catch (error) {
+                console.error('Save project error:', error);
+                alert('Error saving project');
+            }
+        }
+
+        // Delete project
+        async function deleteProject() {
+            if (!currentProject) return;
+
+            if (!confirm(`Are you sure you want to delete "${currentProject.name}"? This action cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const headers = await getAuthHeaders();
+                await fetch(`/api/projects/${currentProject.id}`, {
+                    method: 'DELETE',
+                    headers
+                });
+
+                // Remove from list
+                projects = projects.filter(p => p.id !== currentProject.id);
+                currentProject = null;
+                updateProjectDropdown();
+                closeProjectModal();
+
+                // Go back to dashboard
+                renderDashboard();
+            } catch (error) {
+                console.error('Delete project error:', error);
+                alert('Error deleting project');
+            }
+        }
+
+        // Load team members
+        async function loadTeamMembers() {
+            if (!currentProject) return;
+
+            try {
+                const headers = await getAuthHeaders();
+                const response = await fetch(`/api/projects/${currentProject.id}/members`, { headers });
+                const result = await response.json();
+
+                const container = document.getElementById('teamMembersList');
+                const isOwner = currentProject.role === 'owner';
+                const currentUserId = currentUser?.id;
+
+                if (result.members && result.members.length > 0) {
+                    container.innerHTML = result.members.map(m => {
+                        const isCurrentUser = m.user_id === currentUserId;
+                        const isMemberOwner = m.role === 'owner';
+
+                        let actionsHtml = '';
+                        if (isOwner && !isCurrentUser && !isMemberOwner) {
+                            actionsHtml = `
+                                <div class="team-member-actions">
+                                    <select class="member-action-btn" onchange="changeMemberRole('${m.user_id}', this.value)" title="Change role">
+                                        <option value="viewer" ${m.role === 'viewer' ? 'selected' : ''}>Viewer</option>
+                                        <option value="editor" ${m.role === 'editor' ? 'selected' : ''}>Editor</option>
+                                    </select>
+                                    <button class="member-action-btn primary" onclick="transferOwnership('${m.user_id}')" title="Make owner">👑</button>
+                                    <button class="member-action-btn danger" onclick="removeMember('${m.user_id}')" title="Remove">✕</button>
+                                </div>
+                            `;
+                        }
+
+                        return `
+                            <div class="team-member">
+                                <div class="team-member-info">
+                                    <div class="team-member-avatar">${(m.email || '?')[0].toUpperCase()}</div>
+                                    <div>
+                                        <div class="team-member-name">${m.name || m.email || 'Unknown'}${isCurrentUser ? ' (you)' : ''}</div>
+                                        <div class="team-member-email">${m.email || ''}</div>
+                                    </div>
+                                </div>
+                                <div class="team-member-actions">
+                                    <span class="team-member-role role-${m.role}">${m.role}</span>
+                                    ${actionsHtml}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    container.innerHTML = '<p style="color: #8892a0; text-align: center;">No team members yet</p>';
+                }
+
+                // Also load invitations
+                loadInvitations();
+            } catch (error) {
+                console.error('Load team members error:', error);
+            }
+        }
+
+        // Load invitations
+        async function loadInvitations() {
+            if (!currentProject) return;
+
+            try {
+                const headers = await getAuthHeaders();
+                const response = await fetch(`/api/projects/${currentProject.id}/invitations`, { headers });
+                const result = await response.json();
+
+                const container = document.getElementById('invitationsList');
+                const section = document.getElementById('invitationsSection');
+                const isOwner = currentProject.role === 'owner';
+
+                // Filter to show pending and recently cancelled/accepted
+                const invitations = result.invitations || [];
+
+                if (invitations.length > 0) {
+                    section.style.display = 'block';
+                    container.innerHTML = invitations.map(inv => {
+                        let actionsHtml = '';
+                        if (isOwner && inv.status === 'pending') {
+                            actionsHtml = `
+                                <button class="member-action-btn primary" onclick="resendInvitation('${inv.id}')" title="Resend">📧</button>
+                                <button class="member-action-btn danger" onclick="revokeInvitation('${inv.id}')" title="Revoke">✕</button>
+                            `;
+                        }
+
+                        return `
+                            <div class="invitation-item">
+                                <div class="team-member-info">
+                                    <div class="team-member-avatar" style="background: rgba(255, 193, 7, 0.2); color: #ffc107;">${(inv.email || '?')[0].toUpperCase()}</div>
+                                    <div>
+                                        <div class="team-member-name">${inv.email}</div>
+                                        <div class="team-member-email">Invited as ${inv.role}</div>
+                                    </div>
+                                </div>
+                                <div class="team-member-actions">
+                                    <span class="invitation-status status-${inv.status}">${inv.status}</span>
+                                    ${actionsHtml}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    section.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Load invitations error:', error);
+            }
+        }
+
+        // Resend invitation
+        async function resendInvitation(invitationId) {
+            if (!currentProject) return;
+
+            try {
+                const headers = await getAuthHeaders();
+                const response = await fetch(`/api/projects/${currentProject.id}/invitations/${invitationId}/resend`, {
+                    method: 'POST',
+                    headers
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    let message = 'Invitation link renewed!\n\n';
+                    if (result.email_sent) {
+                        message += `✅ Email resent successfully\n\n`;
+                    } else if (!result.email_configured) {
+                        message += `⚠️ Email not configured. Please share the link manually.\n\n`;
+                    } else {
+                        message += `⚠️ Failed to send email. Please share the link manually.\n\n`;
+                    }
+                    message += `Share this link:\n${result.link}`;
+                    alert(message);
+                    loadInvitations();
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to resend invitation'));
+                }
+            } catch (error) {
+                console.error('Resend invitation error:', error);
+                alert('Error resending invitation');
+            }
+        }
+
+        // Revoke invitation
+        async function revokeInvitation(invitationId) {
+            if (!currentProject) return;
+            if (!confirm('Are you sure you want to revoke this invitation?')) return;
+
+            try {
+                const headers = await getAuthHeaders();
+                const response = await fetch(`/api/projects/${currentProject.id}/invitations/${invitationId}`, {
+                    method: 'DELETE',
+                    headers
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    loadInvitations();
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to revoke invitation'));
+                }
+            } catch (error) {
+                console.error('Revoke invitation error:', error);
+                alert('Error revoking invitation');
+            }
+        }
+
+        // Change member role
+        async function changeMemberRole(userId, newRole) {
+            if (!currentProject) return;
+
+            try {
+                const headers = await getAuthHeaders();
+                const response = await fetch(`/api/projects/${currentProject.id}/members/${userId}`, {
+                    method: 'PUT',
+                    headers,
+                    body: JSON.stringify({ role: newRole })
+                });
+                const result = await response.json();
+
+                if (result.member) {
+                    loadTeamMembers();
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to change role'));
+                }
+            } catch (error) {
+                console.error('Change role error:', error);
+                alert('Error changing role');
+            }
+        }
+
+        // Remove member
+        async function removeMember(userId) {
+            if (!currentProject) return;
+            if (!confirm('Are you sure you want to remove this member from the project?')) return;
+
+            try {
+                const headers = await getAuthHeaders();
+                const response = await fetch(`/api/projects/${currentProject.id}/members/${userId}`, {
+                    method: 'DELETE',
+                    headers
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    loadTeamMembers();
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to remove member'));
+                }
+            } catch (error) {
+                console.error('Remove member error:', error);
+                alert('Error removing member');
+            }
+        }
+
+        // Transfer ownership
+        async function transferOwnership(userId) {
+            if (!currentProject) return;
+            if (!confirm('Are you sure you want to transfer ownership? You will become an editor.')) return;
+
+            try {
+                const headers = await getAuthHeaders();
+                const response = await fetch(`/api/projects/${currentProject.id}/transfer-ownership`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ user_id: userId })
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Ownership transferred successfully');
+                    // Reload projects and update current project role
+                    await loadProjects();
+                    currentProject = projects.find(p => p.id === currentProject.id);
+                    if (currentProject) {
+                        // Update role badge
+                        const roleBadge = document.getElementById('projectRoleBadge');
+                        roleBadge.textContent = currentProject.role;
+                        roleBadge.className = 'project-role-badge ' + currentProject.role;
+                    }
+                    openProjectModal('settings');
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to transfer ownership'));
+                }
+            } catch (error) {
+                console.error('Transfer ownership error:', error);
+                alert('Error transferring ownership');
+            }
+        }
+
+        // Invite team member
+        async function inviteTeamMember() {
+            if (!currentProject) return;
+
+            const email = document.getElementById('inviteEmail').value;
+            const role = document.getElementById('inviteRole').value;
+
+            if (!email) {
+                alert('Please enter an email address');
+                return;
+            }
+
+            try {
+                const headers = await getAuthHeaders();
+                const response = await fetch(`/api/projects/${currentProject.id}/invitations`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ email, role })
+                });
+                const result = await response.json();
+
+                if (result.invitation) {
+                    let message = 'Invitation created!\n\n';
+                    if (result.invitation.email_sent) {
+                        message += `✅ Email sent to ${email}\n\n`;
+                    } else if (!result.invitation.email_configured) {
+                        message += `⚠️ Email not configured. Please share the link manually.\n\n`;
+                    } else {
+                        message += `⚠️ Failed to send email. Please share the link manually.\n\n`;
+                    }
+                    message += `Share this link:\n${result.invitation.link}`;
+                    alert(message);
+                    document.getElementById('inviteEmail').value = '';
+                    loadInvitations();
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to send invitation'));
+                }
+            } catch (error) {
+                console.error('Invite error:', error);
+                alert('Error sending invitation');
+            }
+        }
+
+        // Load project data files
+        async function loadProjectData() {
+            if (!currentProject) return false;
+
+            try {
+                const headers = await getAuthHeaders();
+                const response = await fetch(`/api/projects/${currentProject.id}/data`, { headers });
+                const result = await response.json();
+
+                const container = document.getElementById('dataFileList');
+
+                if (result.data && result.data.length > 0) {
+                    container.innerHTML = result.data.map(d => `
+                        <div class="data-file-item">
+                            <div class="data-file-info">
+                                <div class="data-file-icon">📄</div>
+                                <div>
+                                    <div class="data-file-name">${d.name}</div>
+                                    <div class="data-file-meta">${d.file_type.toUpperCase()} • ${d.row_count} rows</div>
+                                </div>
+                            </div>
+                            <button class="btn-icon" onclick="deleteDataFile('${d.id}')" title="Delete">🗑</button>
+                        </div>
+                    `).join('');
+                    return true; // Data exists
+                } else {
+                    container.innerHTML = '<p style="color: #8892a0; text-align: center; padding: 20px;">No data files uploaded yet</p>';
+                    return false; // No data
+                }
+            } catch (error) {
+                console.error('Load project data error:', error);
+                return false;
+            }
+        }
+
+        // Load project data list for modal
+        async function loadProjectDataList() {
+            if (!currentProject) return;
+
+            try {
+                const headers = await getAuthHeaders();
+                const response = await fetch(`/api/projects/${currentProject.id}/data`, { headers });
+                const result = await response.json();
+
+                const container = document.getElementById('projectDataList');
+
+                if (result.data && result.data.length > 0) {
+                    container.innerHTML = result.data.map(d => `
+                        <div class="data-file-item">
+                            <div class="data-file-info">
+                                <div class="data-file-icon">📄</div>
+                                <div>
+                                    <div class="data-file-name">${d.name}</div>
+                                    <div class="data-file-meta">${d.file_type.toUpperCase()} • ${d.row_count} rows</div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p style="color: #8892a0; text-align: center;">No data files</p>';
+                }
+            } catch (error) {
+                console.error('Load project data list error:', error);
+            }
+        }
+
+        // Upload data file
+        async function uploadDataFile(file) {
+            if (!currentProject) {
+                alert('Please select a project first');
+                return;
+            }
+
+            if (!file) return;
+
+            // Validate file type
+            const validTypes = ['.csv', '.json', '.xlsx', '.xls'];
+            const fileName = file.name.toLowerCase();
+            const isValidType = validTypes.some(ext => fileName.endsWith(ext));
+            if (!isValidType) {
+                alert('Invalid file type. Please upload CSV, JSON, or Excel files.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('name', file.name);
+            formData.append('description', '');
+
+            // Show uploading state
+            const uploadArea = document.getElementById('dataUploadArea');
+            uploadArea.classList.add('uploading');
+            const iconEl = uploadArea.querySelector('.data-upload-icon');
+            const textEl = uploadArea.querySelector('p');
+            if (iconEl) iconEl.textContent = '⏳';
+            if (textEl) textEl.textContent = 'Uploading...';
+
+            let uploadSuccess = false;
+
+            try {
+                const session = await supabaseClient.auth.getSession();
+                const headers = {};
+                if (session.data.session) {
+                    headers['Authorization'] = `Bearer ${session.data.session.access_token}`;
+                }
+
+                const response = await fetch(`/api/projects/${currentProject.id}/data`, {
+                    method: 'POST',
+                    headers,
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (result.data) {
+                    uploadSuccess = true;
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to upload file'));
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert('Error uploading file: ' + error.message);
+            }
+
+            // Restore upload area
+            uploadArea.classList.remove('uploading');
+            if (iconEl) iconEl.textContent = '📤';
+            if (textEl) textEl.textContent = 'Click to upload or drag and drop';
+
+            // Handle post-upload actions separately
+            if (uploadSuccess) {
+                try {
+                    await loadProjectData();
+                    // Refresh preview data files dropdown
+                    await loadPreviewDataFiles();
+                    // Update project's hasData flag
+                    if (currentProject) {
+                        currentProject.hasData = true;
+                    }
+                    switchMainTab('prompts');
+                } catch (e) {
+                    console.error('Post-upload error:', e);
+                }
+            }
+        }
+
+        // Initialize data upload area event listeners
+        function initDataUploadArea() {
+            const uploadArea = document.getElementById('dataUploadArea');
+            const fileInput = document.getElementById('dataFileInput');
+
+            if (!uploadArea || !fileInput) return;
+
+            // Click to upload
+            uploadArea.addEventListener('click', (e) => {
+                if (e.target !== fileInput) {
+                    fileInput.click();
+                }
+            });
+
+            // File input change
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    uploadDataFile(e.target.files[0]);
+                    e.target.value = ''; // Reset for same file selection
+                }
+            });
+
+            // Drag and drop
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.add('drag-over');
+            });
+
+            uploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.remove('drag-over');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.remove('drag-over');
+
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    uploadDataFile(e.dataTransfer.files[0]);
+                }
+            });
+        }
+
+        // Delete data file
+        async function deleteDataFile(dataId) {
+            if (!currentProject) return;
+
+            if (!confirm('Are you sure you want to delete this data file?')) {
+                return;
+            }
+
+            try {
+                const headers = await getAuthHeaders();
+                await fetch(`/api/projects/${currentProject.id}/data/${dataId}`, {
+                    method: 'DELETE',
+                    headers
+                });
+                loadProjectData();
+            } catch (error) {
+                console.error('Delete data error:', error);
+                alert('Error deleting file');
+            }
+        }
+
+        // Load project prompts
+        async function loadProjectPrompts() {
+            if (!currentProject) return;
+
+            try {
+                const headers = await getAuthHeaders();
+                const response = await fetch(`/api/projects/${currentProject.id}/prompts`, { headers });
+                const result = await response.json();
+
+                // Update version dropdowns with project-specific prompts
+                if (result.system_prompts && result.system_prompts.length > 0) {
+                    updateVersionDropdowns('system', result.system_prompts.map(p => p.version));
+                } else {
+                    // Clear dropdowns if no prompts
+                    updateVersionDropdowns('system', []);
+                    document.getElementById('systemPromptInput').value = '';
+                }
+
+                if (result.user_prompts && result.user_prompts.length > 0) {
+                    updateVersionDropdowns('user', result.user_prompts.map(p => p.version));
+                } else {
+                    // Clear dropdowns if no prompts
+                    updateVersionDropdowns('user', []);
+                    document.getElementById('userPromptInput').value = '';
+                }
+
+                // Load the actual prompt content
+                await loadPrompt('system');
+                await loadPrompt('user');
+            } catch (error) {
+                console.error('Load project prompts error:', error);
+            }
+        }
+
+        // Update version dropdowns
+        function updateVersionDropdowns(type, versions) {
+            const selects = [
+                document.getElementById(type + 'VersionSelect'),
+                document.getElementById('preview' + type.charAt(0).toUpperCase() + type.slice(1) + 'Version')
+            ];
+
+            selects.forEach(select => {
+                if (select) {
+                    if (versions.length > 0) {
+                        select.innerHTML = versions.map(v => `<option value="${v}">${v}</option>`).join('');
+                        select.value = versions[versions.length - 1];
+                    } else {
+                        select.innerHTML = '<option value="">No versions</option>';
+                    }
+                }
+            });
+        }
+
+        // Check for invitation in URL
+        async function checkInvitation() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const inviteToken = urlParams.get('invite');
+
+            if (inviteToken && currentUser) {
+                try {
+                    const headers = await getAuthHeaders();
+                    const response = await fetch('/api/invitations/accept', {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({ token: inviteToken })
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        alert('Invitation accepted! You have been added to the project.');
+                        window.history.replaceState({}, '', '/app');
+                        loadProjects();
+                    } else {
+                        alert('Error: ' + (result.error || 'Failed to accept invitation'));
+                    }
+                } catch (error) {
+                    console.error('Accept invitation error:', error);
+                }
+            }
+        }
+
+        // Prompt tab switching
+        function switchPromptTab(type) {
+            document.querySelectorAll('.prompt-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.prompt-tab-content').forEach(c => c.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(type + 'PromptTab').classList.add('active');
+        }
+
+        // Sync version selectors between tabs
+        function syncVersionSelect(type) {
+            const previewSelect = document.getElementById('preview' + type.charAt(0).toUpperCase() + type.slice(1) + 'Version');
+            const promptSelect = document.getElementById(type + 'VersionSelect');
+            promptSelect.value = previewSelect.value;
+            loadPrompt(type);
+        }
+
+        // Sync from prompt tab to preview
+        function syncToPreview(type) {
+            const previewSelect = document.getElementById('preview' + type.charAt(0).toUpperCase() + type.slice(1) + 'Version');
+            const promptSelect = document.getElementById(type + 'VersionSelect');
+            previewSelect.value = promptSelect.value;
+        }
+
+        // Load all project rows for preview dropdown
+        async function loadProjectRows() {
+            if (!currentProject) return;
+
+            const rowSelect = document.getElementById('rowSelect');
+
+            try {
+                const headers = await getAuthHeaders();
+                const response = await fetch(`/api/projects/${currentProject.id}/rows`, { headers });
+                const result = await response.json();
+
+                if (result.rows && result.rows.length > 0) {
+                    rowSelect.innerHTML = '<option value="">-- Select Record --</option>' +
+                        result.rows.map(r => `<option value="${r.id}">${r.identifier}</option>`).join('');
+                } else {
+                    rowSelect.innerHTML = '<option value="">No data - upload in Data tab</option>';
+                }
+            } catch (error) {
+                console.error('Load project rows error:', error);
+                rowSelect.innerHTML = '<option value="">Error loading records</option>';
+            }
+        }
+
+        // Load specific row data for preview
+        async function loadProjectRow() {
+            if (!currentProject) return;
+
+            const rowSelect = document.getElementById('rowSelect');
+            const dataInput = document.getElementById('dataInput');
+            const rowId = rowSelect.value;
+
+            if (!rowId) {
+                dataInput.value = '';
+                currentCompanyName = '';
+                return;
+            }
+
+            dataInput.value = 'Loading data...';
+
+            try {
+                const headers = await getAuthHeaders();
+                const response = await fetch(`/api/projects/${currentProject.id}/rows/${rowId}`, { headers });
+                const result = await response.json();
+
+                if (result.error) {
+                    dataInput.value = `Error: ${result.error}`;
+                } else {
+                    dataInput.value = result.data_text;
+                    currentCompanyName = result.identifier || '';
+                }
+            } catch (error) {
+                dataInput.value = `Connection error: ${error.message}`;
+            }
+        }
+
+        // Legacy function alias
+        function loadPreviewDataFiles() {
+            loadProjectRows();
+        }
+
+        // Legacy function for backwards compatibility
+        async function loadCompanyData() {
+            // Now handled by loadDataRow
+        }
+
+        // Load runs for current company
+        async function loadCompanyRuns() {
+            const runsCard = document.getElementById('runsCard');
+            const runsSelect = document.getElementById('runsSelect');
+            const runsContent = document.getElementById('runsContent');
+
+            if (!currentCompanyName) {
+                runsCard.style.display = 'none';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/get_runs/${encodeURIComponent(currentCompanyName)}`);
+                const result = await response.json();
+
+                if (result.runs && result.runs.length > 0) {
+                    runsCard.style.display = 'block';
+                    runsSelect.innerHTML = result.runs.map(run => {
+                        const scores = run.scores || {};
+                        const scoreText = scores.completeness >= 0 ?
+                            ` | C:${scores.completeness} F:${scores.faithfulness} L:${scores.fluency} A:${scores.analysis_quality || 0}` : '';
+                        return `<option value="${run.id}">${run.timestamp} | ${run.model} | sys:${run.sys_version} usr:${run.usr_version}${scoreText}</option>`;
+                    }).join('');
+                    runsContent.innerHTML = '<div class="no-runs">Karşılaştırmak için yukarıdan çalışma seçin</div>';
+                } else {
+                    runsCard.style.display = 'none';
+                }
+            } catch (error) {
+                runsCard.style.display = 'none';
+            }
+        }
+
+        // Load selected runs
+        async function loadSelectedRuns() {
+            const runsSelect = document.getElementById('runsSelect');
+            const runsContent = document.getElementById('runsContent');
+            const selectedIds = Array.from(runsSelect.selectedOptions).map(opt => opt.value);
+
+            if (selectedIds.length === 0) {
+                runsContent.innerHTML = '<div class="no-runs">Karşılaştırmak için yukarıdan çalışma seçin</div>';
+                return;
+            }
+
+            runsContent.innerHTML = '<div class="no-runs">Yükleniyor...</div>';
+
+            try {
+                const runs = await Promise.all(selectedIds.map(async id => {
+                    const response = await fetch(`/get_run_details/${encodeURIComponent(currentCompanyName)}/${id}`);
+                    return response.json();
+                }));
+
+                const getScoreClass = (score) => score >= 80 ? 'high' : score >= 50 ? 'medium' : 'low';
+
+                runsContent.innerHTML = runs.map(run => {
+                    const scores = run.scores || {};
+                    const scoresHtml = scores.completeness >= 0 ? `
+                        <div class="run-scores">
+                            <span class="run-score ${getScoreClass(scores.completeness)}">Tamlık: ${scores.completeness}</span>
+                            <span class="run-score ${getScoreClass(scores.faithfulness)}">Doğruluk: ${scores.faithfulness}</span>
+                            <span class="run-score ${getScoreClass(scores.fluency)}">Akıcılık: ${scores.fluency}</span>
+                            <span class="run-score ${getScoreClass(scores.analysis_quality || 0)}">Analiz: ${scores.analysis_quality || 'N/A'}</span>
+                        </div>
+                    ` : '';
+
+                    return `
+                        <div class="run-item">
+                            <div class="run-header">
+                                <span class="run-timestamp">${run.timestamp}</span>
+                                <div class="run-meta">
+                                    <span class="run-tag">🤖 ${run.model.split('/')[1].replace('-it', '')}</span>
+                                    <span class="run-tag">⚙️ sys:${run.system_version} / usr:${run.user_version}</span>
+                                    <span class="run-tag">⏱️ ${run.elapsed}s</span>
+                                </div>
+                            </div>
+                            <div class="run-summary">${run.summary}</div>
+                            ${scoresHtml}
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                runsContent.innerHTML = `<div class="error-text">Hata: ${error.message}</div>`;
+            }
+        }
+
+        // Load prompt (project-specific)
+        async function loadPrompt(type) {
+            const versionSelect = document.getElementById(type + 'VersionSelect');
+            const version = versionSelect.value;
+            const input = document.getElementById(type + 'PromptInput');
+
+            if (!version) {
+                input.value = '';
+                return;
+            }
+
+            try {
+                // Use project-specific API if project is selected
+                if (currentProject) {
+                    const headers = await getAuthHeaders();
+                    const response = await fetch(`/api/projects/${currentProject.id}/prompts/${type}/${version}`, { headers });
+                    const result = await response.json();
+                    input.value = result.error ? `Hata: ${result.error}` : result.content;
+                } else {
+                    // Fallback to legacy API
+                    const response = await fetch(`/get_prompt/${type}/${version}`);
+                    const result = await response.json();
+                    input.value = result.error ? `Hata: ${result.error}` : result.content;
+                }
+                syncToPreview(type);
+            } catch (error) {
+                input.value = `Bağlantı hatası: ${error.message}`;
+            }
+        }
+
+        // Save prompt (project-specific)
+        async function savePrompt(type) {
+            if (!currentProject) {
+                alert('Please select a project first');
+                return;
+            }
+
+            const input = document.getElementById(type + 'PromptInput');
+            const resultDiv = document.getElementById(type + 'SaveResult');
+            const versionSelect = document.getElementById(type + 'VersionSelect');
+
+            try {
+                const headers = await getAuthHeaders();
+                const response = await fetch(`/api/projects/${currentProject.id}/prompts`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ type: type, content: input.value })
+                });
+
+                const result = await response.json();
+
+                if (result.error) {
+                    resultDiv.innerHTML = `<div class="error-text">${result.error}</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="success-text">✓ Versiyon ${result.prompt.version} kaydedildi</div>`;
+
+                    // Add new version to both selects
+                    const option = document.createElement('option');
+                    option.value = result.prompt.version;
+                    option.textContent = result.prompt.version;
+                    versionSelect.appendChild(option);
+                    versionSelect.value = result.prompt.version;
+
+                    // Also add to preview select
+                    const previewSelect = document.getElementById('preview' + type.charAt(0).toUpperCase() + type.slice(1) + 'Version');
+                    const previewOption = document.createElement('option');
+                    previewOption.value = result.prompt.version;
+                    previewOption.textContent = result.prompt.version;
+                    previewSelect.appendChild(previewOption);
+                    previewSelect.value = result.prompt.version;
+
+                    setTimeout(() => { resultDiv.innerHTML = ''; }, 3000);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error-text">Bağlantı hatası: ${error.message}</div>`;
+            }
+        }
+
+        // Summarize
+        async function summarize() {
+            const data = document.getElementById('dataInput').value.trim();
+            const btn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const resultCard = document.getElementById('resultCard');
+            const resultContent = document.getElementById('resultContent');
+            const stats = document.getElementById('stats');
+
+            const systemVersion = document.getElementById('previewSystemVersion').value;
+            const userVersion = document.getElementById('previewUserVersion').value;
+            const model = document.getElementById('modelSelect').value;
+
+            if (!data) {
+                alert('Lütfen veri girin');
+                return;
+            }
+
+            btn.disabled = true;
+            loading.classList.add('visible');
+            resultCard.classList.remove('visible');
+
+            const startTime = Date.now();
+
+            try {
+                const response = await fetch('/summarize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        data: data,
+                        system_version: systemVersion,
+                        user_version: userVersion,
+                        model: model,
+                        company_name: currentCompanyName || 'Manuel Giriş'
+                    })
+                });
+
+                const result = await response.json();
+                const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+                if (result.error) {
+                    resultContent.innerHTML = `<div class="error-text">${result.error}</div>`;
+                    stats.innerHTML = '';
+                } else {
+                    resultContent.innerHTML = `<div class="summary-text">${result.summary}</div>`;
+
+                    const wordCount = result.summary.split(/\s+/).length;
+                    const sentenceCount = (result.summary.match(/\./g) || []).length;
+
+                    const modelName = model.split('/')[1].replace('-it', '');
+
+                    // Format validation scores
+                    const scores = result.scores || {};
+                    const getScoreClass = (score) => score >= 80 ? 'high' : score >= 50 ? 'medium' : 'low';
+
+                    stats.innerHTML = `
+                        <div class="stat"><span>⏱️</span><span class="stat-value">${result.elapsed || elapsed}s</span></div>
+                        <div class="stat"><span>📝</span><span class="stat-value">${sentenceCount}</span> cümle</div>
+                        <div class="stat"><span>💬</span><span class="stat-value">${wordCount}</span> kelime</div>
+                        <div class="stat"><span>🤖</span> ${modelName}</div>
+                        <div class="stat"><span>🔧</span> sys:${systemVersion} / usr:${userVersion}</div>
+                    `;
+
+                    // Add validation scores
+                    if (scores.completeness >= 0) {
+                        stats.innerHTML += `
+                            <div class="scores-container">
+                                <div class="score-item">
+                                    <div class="score-label">Tamlık</div>
+                                    <div class="score-value ${getScoreClass(scores.completeness)}">${scores.completeness}</div>
+                                </div>
+                                <div class="score-item">
+                                    <div class="score-label">Doğruluk</div>
+                                    <div class="score-value ${getScoreClass(scores.faithfulness)}">${scores.faithfulness}</div>
+                                </div>
+                                <div class="score-item">
+                                    <div class="score-label">Akıcılık</div>
+                                    <div class="score-value ${getScoreClass(scores.fluency)}">${scores.fluency}</div>
+                                </div>
+                                <div class="score-item">
+                                    <div class="score-label">Analiz</div>
+                                    <div class="score-value ${getScoreClass(scores.analysis_quality)}">${scores.analysis_quality}</div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // Refresh runs list
+                    await loadCompanyRuns();
+                }
+
+                resultCard.classList.add('visible');
+
+            } catch (error) {
+                resultContent.innerHTML = `<div class="error-text">Bağlantı hatası: ${error.message}</div>`;
+                stats.innerHTML = '';
+                resultCard.classList.add('visible');
+            } finally {
+                btn.disabled = false;
+                loading.classList.remove('visible');
+            }
+        }
+
+        // Keyboard shortcut
+        document.getElementById('dataInput').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') summarize();
+        });
+
+        // =============================================================================
+        // TESTING TAB FUNCTIONS
+        // =============================================================================
+
+        let currentSessionId = null;
+        let selectedSessions = new Set();
+
+        // Start a new test session
+        async function startTestSession() {
+            const btn = document.getElementById('startTestBtn');
+            const progressDiv = document.getElementById('testProgress');
+            const resultsCard = document.getElementById('sessionResultsCard');
+            const analysisCard = document.getElementById('analysisCard');
+
+            const systemVersion = document.getElementById('testSystemVersion').value;
+            const userVersion = document.getElementById('testUserVersion').value;
+            const model = document.getElementById('testModelSelect').value;
+
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Başlatılıyor...';
+            progressDiv.style.display = 'block';
+            resultsCard.style.display = 'none';
+            analysisCard.style.display = 'none';
+
+            try {
+                // Start session
+                const startResponse = await fetch('/start_test_session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        system_version: systemVersion,
+                        user_version: userVersion,
+                        model: model
+                    })
+                });
+
+                const startResult = await startResponse.json();
+                if (startResult.error) {
+                    throw new Error(startResult.error);
+                }
+
+                currentSessionId = startResult.session_id;
+                const customers = startResult.customers;
+                const total = customers.length;
+
+                // Initialize results table
+                const resultsBody = document.getElementById('resultsBody');
+                resultsBody.innerHTML = '';
+
+                // Run tests for each customer sequentially
+                for (let i = 0; i < customers.length; i++) {
+                    const customer = customers[i];
+
+                    // Update progress
+                    updateProgress(i, total, null);
+
+                    try {
+                        const testResponse = await fetch('/run_single_test', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                session_id: currentSessionId,
+                                customer_num: customer
+                            })
+                        });
+
+                        const testResult = await testResponse.json();
+
+                        if (testResult.error) {
+                            // Add error row
+                            addResultRow(customer, null, 0, true);
+                        } else {
+                            // Add success row
+                            addResultRow(customer, testResult.scores, testResult.elapsed, false);
+                            updateProgress(i + 1, total, testResult.avg_scores);
+                        }
+                    } catch (err) {
+                        addResultRow(customer, null, 0, true);
+                    }
+                }
+
+                // Test complete
+                btn.innerHTML = '✅ Tamamlandı';
+                resultsCard.style.display = 'block';
+                analysisCard.style.display = 'block';
+
+                // Load session summary
+                await loadSessionSummary(currentSessionId);
+                await loadAnalysis();
+                await loadSessions();
+
+            } catch (error) {
+                alert('Test başlatılamadı: ' + error.message);
+                btn.innerHTML = '🚀 Testi Başlat';
+            } finally {
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '🚀 Testi Başlat';
+                }, 2000);
+            }
+        }
+
+        function updateProgress(completed, total, avgScores) {
+            const percent = Math.round((completed / total) * 100);
+            document.getElementById('progressText').textContent = `${completed} / ${total} tamamlandı`;
+            document.getElementById('progressPercent').textContent = `${percent}%`;
+            document.getElementById('progressFill').style.width = `${percent}%`;
+
+            if (avgScores) {
+                document.getElementById('liveScores').innerHTML = `
+                    <span>Ortalama: C: ${avgScores.completeness || '-'} | F: ${avgScores.faithfulness || '-'} | L: ${avgScores.fluency || '-'} | A: ${avgScores.analysis_quality || '-'}</span>
+                `;
+            }
+        }
+
+        function addResultRow(customer, scores, elapsed, isError) {
+            const resultsBody = document.getElementById('resultsBody');
+            const getScoreClass = (score) => score >= 80 ? 'high' : score >= 50 ? 'medium' : 'low';
+
+            if (isError) {
+                resultsBody.innerHTML += `
+                    <tr>
+                        <td>${customer}</td>
+                        <td colspan="5" style="color: #ff5252;">Hata oluştu</td>
+                    </tr>
+                `;
+            } else {
+                resultsBody.innerHTML += `
+                    <tr>
+                        <td>${customer}</td>
+                        <td class="score-cell ${getScoreClass(scores.completeness)}">${scores.completeness}</td>
+                        <td class="score-cell ${getScoreClass(scores.faithfulness)}">${scores.faithfulness}</td>
+                        <td class="score-cell ${getScoreClass(scores.fluency)}">${scores.fluency}</td>
+                        <td class="score-cell ${getScoreClass(scores.analysis_quality)}">${scores.analysis_quality}</td>
+                        <td>${elapsed}s</td>
+                    </tr>
+                `;
+            }
+
+            // Show results card
+            document.getElementById('sessionResultsCard').style.display = 'block';
+        }
+
+        async function loadSessionSummary(sessionId) {
+            try {
+                const response = await fetch(`/get_session_details/${sessionId}`);
+                const session = await response.json();
+
+                if (session.error) return;
+
+                const summaryDiv = document.getElementById('sessionSummary');
+                const getScoreClass = (score) => score >= 80 ? 'high' : score >= 50 ? 'medium' : 'low';
+
+                summaryDiv.innerHTML = `
+                    <div class="summary-item">
+                        <div class="summary-label">Toplam</div>
+                        <div class="summary-value">${session.total_customers}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Tamlık</div>
+                        <div class="summary-value ${getScoreClass(session.avg_scores.completeness)}">${session.avg_scores.completeness}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Doğruluk</div>
+                        <div class="summary-value ${getScoreClass(session.avg_scores.faithfulness)}">${session.avg_scores.faithfulness}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Akıcılık</div>
+                        <div class="summary-value ${getScoreClass(session.avg_scores.fluency)}">${session.avg_scores.fluency}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Analiz</div>
+                        <div class="summary-value ${getScoreClass(session.avg_scores.analysis_quality)}">${session.avg_scores.analysis_quality}</div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Session summary error:', error);
+            }
+        }
+
+        async function loadSessions() {
+            const sessionsList = document.getElementById('sessionsList');
+
+            try {
+                let response, result;
+
+                // Use project-specific API if project is selected
+                if (currentProject) {
+                    const headers = await getAuthHeaders();
+                    response = await fetch(`/api/projects/${currentProject.id}/sessions`, { headers });
+                    result = await response.json();
+                } else {
+                    // Fallback to legacy API
+                    response = await fetch('/get_sessions');
+                    result = await response.json();
+                }
+
+                const getScoreClass = (score) => score >= 80 ? 'high' : score >= 50 ? 'medium' : 'low';
+
+                if (!result.sessions || result.sessions.length === 0) {
+                    sessionsList.innerHTML = '<div class="no-runs">Henüz test oturumu yok</div>';
+                    return;
+                }
+
+                sessionsList.innerHTML = result.sessions.map(s => {
+                    const isSelected = selectedSessions.has(s.id);
+                    const modelName = s.model.split('/').pop().replace('-it', '');
+                    const avgScores = s.avg_scores || {};
+
+                    return `
+                        <div class="session-item ${isSelected ? 'selected' : ''}" onclick="toggleSessionSelection('${s.id}')">
+                            <input type="checkbox" class="session-checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleSessionSelection('${s.id}')">
+                            <div class="session-info">
+                                <div class="session-title">${s.timestamp} | ${modelName}</div>
+                                <div class="session-meta">sys:${s.system_version} / usr:${s.user_version} | ${s.completed || 0}/${s.total_customers} müşteri</div>
+                            </div>
+                            <div class="session-scores">
+                                <span class="mini-score ${getScoreClass(avgScores.completeness || 0)}">C:${avgScores.completeness || '-'}</span>
+                                <span class="mini-score ${getScoreClass(avgScores.faithfulness || 0)}">F:${avgScores.faithfulness || '-'}</span>
+                                <span class="mini-score ${getScoreClass(avgScores.fluency || 0)}">L:${avgScores.fluency || '-'}</span>
+                                <span class="mini-score ${getScoreClass(avgScores.analysis_quality || 0)}">A:${avgScores.analysis_quality || '-'}</span>
+                            </div>
+                            <button class="btn btn-small btn-secondary session-download-btn" onclick="event.stopPropagation(); downloadSessionReport('${s.id}')" title="Rapor İndir">📥</button>
+                        </div>
+                    `;
+                }).join('');
+
+                updateCompareButton();
+            } catch (error) {
+                console.error('Load sessions error:', error);
+                sessionsList.innerHTML = '<div class="no-runs">Oturumlar yüklenirken hata oluştu</div>';
+            }
+        }
+
+        function toggleSessionSelection(sessionId) {
+            if (selectedSessions.has(sessionId)) {
+                selectedSessions.delete(sessionId);
+            } else {
+                selectedSessions.add(sessionId);
+            }
+            loadSessions();
+        }
+
+        function updateCompareButton() {
+            const compareGroup = document.getElementById('compareGroup');
+            compareGroup.style.display = selectedSessions.size >= 2 ? 'flex' : 'none';
+        }
+
+        async function loadAnalysis() {
+            if (!currentSessionId) return;
+
+            const threshold = document.getElementById('thresholdSelect').value;
+            const analysisContent = document.getElementById('analysisContent');
+
+            try {
+                const response = await fetch(`/get_session_analysis/${currentSessionId}?threshold=${threshold}`);
+                const analysis = await response.json();
+
+                if (analysis.error) {
+                    analysisContent.innerHTML = `<div class="error-text">${analysis.error}</div>`;
+                    return;
+                }
+
+                const issueDistribution = analysis.issue_distribution || {};
+                const customers = analysis.customers || [];
+
+                analysisContent.innerHTML = `
+                    <div class="analysis-section">
+                        <div class="analysis-title">Sorun Dağılımı (Eşik: ${threshold})</div>
+                        <div class="issue-bars">
+                            <div class="issue-bar">
+                                <div class="issue-bar-label">Tamlık</div>
+                                <div class="issue-bar-value">${issueDistribution.completeness || 0}</div>
+                            </div>
+                            <div class="issue-bar">
+                                <div class="issue-bar-label">Doğruluk</div>
+                                <div class="issue-bar-value">${issueDistribution.faithfulness || 0}</div>
+                            </div>
+                            <div class="issue-bar">
+                                <div class="issue-bar-label">Akıcılık</div>
+                                <div class="issue-bar-value">${issueDistribution.fluency || 0}</div>
+                            </div>
+                            <div class="issue-bar">
+                                <div class="issue-bar-label">Analiz</div>
+                                <div class="issue-bar-value">${issueDistribution.analysis_quality || 0}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="analysis-section">
+                        <div class="analysis-title">Düşük Skorlu Müşteriler (${analysis.total_low_score} toplam)</div>
+                        ${customers.map(c => `
+                            <div class="customer-analysis">
+                                <div class="customer-analysis-header">
+                                    <span class="customer-id">${c.customer}</span>
+                                    <div class="customer-issues">
+                                        ${c.issues.map(i => `<span class="issue-tag">${i}</span>`).join('')}
+                                    </div>
+                                    <span class="analysis-toggle" onclick="toggleAnalysisDetails(this)">Detayları Göster</span>
+                                </div>
+                                <div class="analysis-details">
+                                    <div class="analysis-text"><strong>Girdi:</strong><br>${c.input.substring(0, 500)}...</div>
+                                    <div class="analysis-text"><strong>Çıktı:</strong><br>${c.output.substring(0, 500)}...</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+
+                document.getElementById('analysisCard').style.display = 'block';
+            } catch (error) {
+                console.error('Load analysis error:', error);
+            }
+        }
+
+        function toggleAnalysisDetails(elem) {
+            const details = elem.closest('.customer-analysis').querySelector('.analysis-details');
+            details.classList.toggle('visible');
+            elem.textContent = details.classList.contains('visible') ? 'Detayları Gizle' : 'Detayları Göster';
+        }
+
+        async function compareSessions() {
+            if (selectedSessions.size < 2) {
+                alert('Lütfen en az 2 oturum seçin');
+                return;
+            }
+
+            const comparisonCard = document.getElementById('comparisonCard');
+            const comparisonContent = document.getElementById('comparisonContent');
+
+            comparisonContent.innerHTML = '<div class="no-runs">Karşılaştırılıyor...</div>';
+            comparisonCard.style.display = 'block';
+
+            try {
+                const response = await fetch('/compare_sessions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_ids: Array.from(selectedSessions) })
+                });
+
+                const comparison = await response.json();
+
+                if (comparison.error) {
+                    comparisonContent.innerHTML = `<div class="error-text">${comparison.error}</div>`;
+                    return;
+                }
+
+                const sessions = comparison.sessions || [];
+                const getScoreClass = (score) => score >= 80 ? 'high' : score >= 50 ? 'medium' : 'low';
+                const getDiffClass = (diff) => diff > 0 ? 'diff-positive' : diff < 0 ? 'diff-negative' : '';
+
+                // Session comparison table
+                let html = `
+                    <div class="analysis-section">
+                        <div class="analysis-title">Oturum Karşılaştırması</div>
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Oturum</th>
+                                    <th>Model</th>
+                                    <th>Sys/Usr</th>
+                                    <th>Tamlık</th>
+                                    <th>Doğruluk</th>
+                                    <th>Akıcılık</th>
+                                    <th>Analiz</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${sessions.map(s => {
+                                    const modelName = s.model.split('/').pop().replace('-it', '');
+                                    return `
+                                        <tr>
+                                            <td>${s.timestamp}</td>
+                                            <td>${modelName}</td>
+                                            <td>${s.system_version}/${s.user_version}</td>
+                                            <td class="${getScoreClass(s.avg_scores.completeness)}">${s.avg_scores.completeness}</td>
+                                            <td class="${getScoreClass(s.avg_scores.faithfulness)}">${s.avg_scores.faithfulness}</td>
+                                            <td class="${getScoreClass(s.avg_scores.fluency)}">${s.avg_scores.fluency}</td>
+                                            <td class="${getScoreClass(s.avg_scores.analysis_quality)}">${s.avg_scores.analysis_quality}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                // Customer comparison (biggest differences)
+                if (comparison.customer_comparison && comparison.customer_comparison.length > 0) {
+                    html += `
+                        <div class="analysis-section">
+                            <div class="analysis-title">En Büyük Farklar (Müşteri Bazında) <small style="color:#8892a0">- Detay için tıklayın</small></div>
+                            <table class="comparison-table">
+                                <thead>
+                                    <tr>
+                                        <th>Müşteri</th>
+                                        <th>Oturum</th>
+                                        <th>Tamlık</th>
+                                        <th>Doğruluk</th>
+                                        <th>Akıcılık</th>
+                                        <th>Analiz</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${comparison.customer_comparison.map(c => {
+                                        const sessionIds = Object.keys(c.scores);
+                                        return sessionIds.map((sessionId, idx) => {
+                                            const scores = c.scores[sessionId];
+                                            return `
+                                            <tr class="clickable-row" onclick="openComparisonModal('${c.customer}')">
+                                                ${idx === 0 ? `<td rowspan="${sessionIds.length}"><strong>${c.customer}</strong><br><small style="color:#8892a0">Fark: ${c.max_diff}</small></td>` : ''}
+                                                <td style="font-size:0.8rem">${sessionId}</td>
+                                                <td class="${getScoreClass(scores.completeness)}">${scores.completeness}</td>
+                                                <td class="${getScoreClass(scores.faithfulness)}">${scores.faithfulness}</td>
+                                                <td class="${getScoreClass(scores.fluency)}">${scores.fluency}</td>
+                                                <td class="${getScoreClass(scores.analysis_quality)}">${scores.analysis_quality}</td>
+                                            </tr>
+                                        `}).join('');
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+
+                comparisonContent.innerHTML = html;
+
+                // Store comparison data for download
+                window.lastComparisonData = comparison;
+            } catch (error) {
+                comparisonContent.innerHTML = `<div class="error-text">Hata: ${error.message}</div>`;
+            }
+        }
+
+        // =============================================================================
+        // DOWNLOAD FUNCTIONS
+        // =============================================================================
+
+        async function downloadSessionReport(sessionId = null) {
+            const targetSessionId = sessionId || currentSessionId;
+            if (!targetSessionId) {
+                alert('İndirilecek oturum bulunamadı');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/get_session_details/${targetSessionId}`);
+                const session = await response.json();
+
+                if (session.error) {
+                    alert('Oturum yüklenemedi: ' + session.error);
+                    return;
+                }
+
+                // Create CSV content
+                let csv = 'Test Oturumu Raporu\n';
+                csv += `Oturum ID,${session.id}\n`;
+                csv += `Tarih,${session.timestamp}\n`;
+                csv += `Model,${session.model}\n`;
+                csv += `System Prompt,${session.system_version}\n`;
+                csv += `User Prompt,${session.user_version}\n`;
+                csv += `Toplam Müşteri,${session.total_customers}\n`;
+                csv += `Tamamlanan,${session.completed}\n`;
+                csv += `Durum,${session.status}\n`;
+                csv += '\n';
+                csv += 'Ortalama Skorlar\n';
+                csv += `Tamlık,${session.avg_scores.completeness}\n`;
+                csv += `Doğruluk,${session.avg_scores.faithfulness}\n`;
+                csv += `Akıcılık,${session.avg_scores.fluency}\n`;
+                csv += `Analiz Kalitesi,${session.avg_scores.analysis_quality}\n`;
+                csv += '\n';
+                csv += 'Müşteri Detayları\n';
+                csv += 'Müşteri No,Tamlık,Doğruluk,Akıcılık,Analiz,Süre (s),Girdi,Çıktı\n';
+
+                for (const r of session.results) {
+                    const input = r.input.replace(/"/g, '""').replace(/\n/g, ' ');
+                    const output = r.output.replace(/"/g, '""').replace(/\n/g, ' ');
+                    csv += `${r.customer},${r.scores.completeness},${r.scores.faithfulness},${r.scores.fluency},${r.scores.analysis_quality},${r.elapsed},"${input}","${output}"\n`;
+                }
+
+                // Download file
+                downloadFile(csv, `session_${session.id}.csv`, 'text/csv');
+
+            } catch (error) {
+                alert('İndirme hatası: ' + error.message);
+            }
+        }
+
+        async function downloadComparisonReport() {
+            if (!window.lastComparisonData) {
+                alert('Karşılaştırma verisi bulunamadı. Önce oturumları karşılaştırın.');
+                return;
+            }
+
+            const comparison = window.lastComparisonData;
+
+            // Create CSV content
+            let csv = 'Oturum Karşılaştırma Raporu\n';
+            csv += `Oluşturulma Tarihi,${new Date().toLocaleString('tr-TR')}\n`;
+            csv += '\n';
+
+            // Session summary
+            csv += 'Oturum Özeti\n';
+            csv += 'Oturum ID,Tarih,Model,System Ver,User Ver,Tamlık,Doğruluk,Akıcılık,Analiz\n';
+            for (const s of comparison.sessions) {
+                const modelName = s.model.split('/').pop().replace('-it', '');
+                csv += `${s.id},${s.timestamp},${modelName},${s.system_version},${s.user_version},`;
+                csv += `${s.avg_scores.completeness},${s.avg_scores.faithfulness},${s.avg_scores.fluency},${s.avg_scores.analysis_quality}\n`;
+            }
+
+            csv += '\n';
+
+            // Score differences
+            if (comparison.sessions.length >= 2) {
+                csv += 'Skor Farkları (İlk Oturum vs Diğerleri)\n';
+                const base = comparison.sessions[0];
+                for (let i = 1; i < comparison.sessions.length; i++) {
+                    const other = comparison.sessions[i];
+                    csv += `${base.id} vs ${other.id}\n`;
+                    csv += `Tamlık Farkı,${(other.avg_scores.completeness - base.avg_scores.completeness).toFixed(1)}\n`;
+                    csv += `Doğruluk Farkı,${(other.avg_scores.faithfulness - base.avg_scores.faithfulness).toFixed(1)}\n`;
+                    csv += `Akıcılık Farkı,${(other.avg_scores.fluency - base.avg_scores.fluency).toFixed(1)}\n`;
+                    csv += `Analiz Farkı,${(other.avg_scores.analysis_quality - base.avg_scores.analysis_quality).toFixed(1)}\n`;
+                }
+                csv += '\n';
+            }
+
+            // Customer comparison
+            if (comparison.customer_comparison && comparison.customer_comparison.length > 0) {
+                csv += 'Müşteri Bazında En Büyük Farklar\n';
+                csv += 'Müşteri No,Maks Fark';
+
+                // Add headers for each session
+                const sessionIds = Object.keys(comparison.customer_comparison[0].scores);
+                for (const sid of sessionIds) {
+                    csv += `,${sid} Tamlık,${sid} Doğruluk,${sid} Akıcılık,${sid} Analiz`;
+                }
+                csv += '\n';
+
+                for (const c of comparison.customer_comparison) {
+                    csv += `${c.customer},${c.max_diff}`;
+                    for (const sid of sessionIds) {
+                        const scores = c.scores[sid] || {};
+                        csv += `,${scores.completeness || 0},${scores.faithfulness || 0},${scores.fluency || 0},${scores.analysis_quality || 0}`;
+                    }
+                    csv += '\n';
+                }
+            }
+
+            // Download file
+            const sessionIds = comparison.sessions.map(s => s.id).join('_vs_');
+            downloadFile(csv, `comparison_${sessionIds}.csv`, 'text/csv');
+        }
+
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob(['\ufeff' + content], { type: mimeType + ';charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // =============================================================================
+        // COMPARISON MODAL FUNCTIONS
+        // =============================================================================
+
+        let modalCustomerData = {};
+
+        async function openComparisonModal(customerId) {
+            const modal = document.getElementById('comparisonModal');
+            const comparison = window.lastComparisonData;
+
+            if (!comparison || !comparison.sessions) {
+                alert('Karşılaştırma verisi bulunamadı');
+                return;
+            }
+
+            document.getElementById('modalCustomerId').textContent = customerId;
+            modal.classList.add('visible');
+            document.body.style.overflow = 'hidden';
+
+            // Show loading state
+            document.getElementById('modalInputContent').innerHTML = '<span style="color:#8892a0">Yükleniyor...</span>';
+            document.getElementById('modalOutputsGrid').innerHTML = '<div style="color:#8892a0">Yükleniyor...</div>';
+            document.getElementById('modalPromptsGrid').innerHTML = '';
+
+            // Reset to outputs tab
+            switchModalTab('outputs');
+
+            try {
+                // Fetch session details for each session
+                const sessionDetails = await Promise.all(
+                    comparison.sessions.map(async s => {
+                        const response = await fetch(`/get_session_details/${s.id}`);
+                        return response.json();
+                    })
+                );
+
+                // Find customer results in each session
+                const customerResults = sessionDetails.map(session => {
+                    const result = session.results?.find(r => r.customer === customerId);
+                    return {
+                        session: session,
+                        result: result
+                    };
+                }).filter(r => r.result);
+
+                if (customerResults.length === 0) {
+                    document.getElementById('modalInputContent').innerHTML = '<span style="color:#ff5252">Müşteri verisi bulunamadı</span>';
+                    return;
+                }
+
+                // Store data for prompts tab
+                modalCustomerData = {
+                    customerId: customerId,
+                    sessions: customerResults
+                };
+
+                // Display input (same for all)
+                document.getElementById('modalInputContent').textContent = customerResults[0].result.input;
+
+                // Build outputs grid
+                const getScoreClass = (score) => score >= 80 ? 'high' : score >= 50 ? 'medium' : 'low';
+
+                let outputsHtml = '';
+                for (const { session, result } of customerResults) {
+                    const modelName = session.model.split('/').pop().replace('-it', '');
+                    const scores = result.scores;
+
+                    outputsHtml += `
+                        <div class="compare-panel">
+                            <div class="compare-panel-header">
+                                <div>
+                                    <div class="compare-panel-title">${modelName}</div>
+                                    <div class="compare-panel-meta">sys:${session.system_version} / usr:${session.user_version}</div>
+                                </div>
+                                <div class="compare-panel-scores">
+                                    <span class="compare-panel-score ${getScoreClass(scores.completeness)}">C:${scores.completeness}</span>
+                                    <span class="compare-panel-score ${getScoreClass(scores.faithfulness)}">F:${scores.faithfulness}</span>
+                                    <span class="compare-panel-score ${getScoreClass(scores.fluency)}">L:${scores.fluency}</span>
+                                    <span class="compare-panel-score ${getScoreClass(scores.analysis_quality)}">A:${scores.analysis_quality}</span>
+                                </div>
+                            </div>
+                            <div class="compare-panel-body">${result.output}</div>
+                        </div>
+                    `;
+                }
+                document.getElementById('modalOutputsGrid').innerHTML = outputsHtml;
+
+            } catch (error) {
+                document.getElementById('modalInputContent').innerHTML = `<span style="color:#ff5252">Hata: ${error.message}</span>`;
+            }
+        }
+
+        async function loadModalPrompts() {
+            const promptsGrid = document.getElementById('modalPromptsGrid');
+
+            if (!modalCustomerData.sessions || modalCustomerData.sessions.length === 0) {
+                promptsGrid.innerHTML = '<div style="color:#ff5252">Veri bulunamadı</div>';
+                return;
+            }
+
+            promptsGrid.innerHTML = '<div style="color:#8892a0">Promptlar yükleniyor...</div>';
+
+            try {
+                let promptsHtml = '';
+
+                for (const { session } of modalCustomerData.sessions) {
+                    const modelName = session.model.split('/').pop().replace('-it', '');
+
+                    // Fetch prompts
+                    const [sysResponse, usrResponse] = await Promise.all([
+                        fetch(`/get_prompt/system/${session.system_version}`),
+                        fetch(`/get_prompt/user/${session.user_version}`)
+                    ]);
+
+                    const sysPrompt = await sysResponse.json();
+                    const usrPrompt = await usrResponse.json();
+
+                    promptsHtml += `
+                        <div class="compare-panel">
+                            <div class="compare-panel-header">
+                                <div>
+                                    <div class="compare-panel-title">${modelName}</div>
+                                    <div class="compare-panel-meta">sys:${session.system_version} / usr:${session.user_version}</div>
+                                </div>
+                            </div>
+                            <div class="compare-panel-body prompt-content">
+<strong style="color:#00d9ff">── System Prompt (v${session.system_version}) ──</strong>
+
+${sysPrompt.content}
+
+<strong style="color:#00ff88">── User Prompt (v${session.user_version}) ──</strong>
+
+${usrPrompt.content}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                promptsGrid.innerHTML = promptsHtml;
+
+            } catch (error) {
+                promptsGrid.innerHTML = `<div style="color:#ff5252">Prompt yükleme hatası: ${error.message}</div>`;
+            }
+        }
+
+        function closeComparisonModal() {
+            const modal = document.getElementById('comparisonModal');
+            modal.classList.remove('visible');
+            document.body.style.overflow = '';
+            modalCustomerData = {};
+        }
+
+        function closeModalOnOverlay(event) {
+            if (event.target.classList.contains('modal-overlay')) {
+                closeComparisonModal();
+            }
+        }
+
+        function switchModalTab(tab) {
+            document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (tab === 'outputs') {
+                document.getElementById('modalOutputsTab').style.display = 'block';
+                document.getElementById('modalPromptsTab').style.display = 'none';
+            } else if (tab === 'prompts') {
+                document.getElementById('modalOutputsTab').style.display = 'none';
+                document.getElementById('modalPromptsTab').style.display = 'block';
+                // Load prompts on first view
+                if (document.getElementById('modalPromptsGrid').innerHTML === '') {
+                    loadModalPrompts();
+                }
+            }
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeComparisonModal();
+            }
+        });
+
+        // Load sessions on tab switch
+        function switchMainTab(tab) {
+            // Remove active from all tabs and content
+            document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.main-tab-content').forEach(c => {
+                c.classList.remove('active');
+                c.style.display = 'none';
+            });
+
+            // Find and activate the correct tab button
+            const tabButtons = document.querySelectorAll('.main-tab');
+            tabButtons.forEach(btn => {
+                if (btn.getAttribute('onclick')?.includes(`'${tab}'`)) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Show the tab content
+            const tabContent = document.getElementById(tab + 'Tab');
+            if (tabContent) {
+                tabContent.classList.add('active');
+                tabContent.style.display = 'block';
+            }
+
+            // Load sessions when switching to testing tab
+            if (tab === 'testing') {
+                loadSessions();
+            }
+
+            // Load project data when switching to data tab
+            if (tab === 'data') {
+                loadProjectData();
+            }
+
+            // Load preview data files when switching to summarize/preview tab
+            if (tab === 'summarize') {
+                loadPreviewDataFiles();
+            }
+        }
+    </script>
+</body>
+</html>

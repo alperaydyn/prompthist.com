@@ -1,0 +1,15 @@
+## MÜŞTERİ: {company_name}
+
+## KURAL TABANLI CÜMLELER:
+{data_rows}
+
+## TALİMAT:
+Yukarıdaki kural tabanlı cümleleri, deneyimli bir bankacının ağzından çıkmış gibi, akıcı ve doğal bir metin haline getir.
+
+- Tüm önemli bilgileri koru
+- Sayısal verileri aynen aktar
+- Mekanik ifadeleri insani bir dile çevir
+- Mantıksal bir akış oluştur
+- Tek paragraf veya kısa paragraflar halinde yaz
+
+Akıcı Özet:

@@ -1,0 +1,42 @@
+# Environment variables
+.env
+
+# Secrets
+client_secret*.json
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Data files
+*.csv
+*.xlsx
+*.xls
+data/
+
+# Generated data
+sessions/
+runs/
+
+# Supabase temp files
+supabase/.temp/
